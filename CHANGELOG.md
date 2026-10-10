@@ -3,6 +3,12 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.2.6 — 2026-10-10
+
+### Changed
+
+- No changes in the app. REV is now open source under the GNU GPL v3.0.
+
 ## 0.2.5 — 2026-10-10
 
 ### Changed

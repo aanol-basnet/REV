@@ -223,3 +223,14 @@ Known limitations:
 - REV uses one Navidrome account, so everyone signing in to the same REV server shares its
   favorites, playlists and play counts. Listening stats are kept per REV account.
 - The Wear OS app hasn't been tried on many watches.
+
+## Built something with REV?
+
+Forks, themes, new features, ports to other music servers: I'd love to see what you make. Share it
+in [Discussions](https://github.com/aanol-basnet/REV/discussions) or open an issue.
+
+## License
+
+REV is free software under the [GNU General Public License v3.0](LICENSE). You can use, study,
+change and share it. If you distribute a modified version, it must stay under the GPL with its
+source available.
