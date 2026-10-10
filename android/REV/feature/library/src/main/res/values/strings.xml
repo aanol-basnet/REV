@@ -103,4 +103,6 @@
         <item quantity="one">Add to playlist</item>
         <item quantity="other">Add %d songs to playlist</item>
     </plurals>
+    <string name="mix_from_downloads">Server unreachable. Showing the songs from your downloads.</string>
+    <string name="mix_empty">This mix has no songs right now.</string>
 </resources>

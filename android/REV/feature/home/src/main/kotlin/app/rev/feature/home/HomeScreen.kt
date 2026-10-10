@@ -76,6 +76,7 @@ class HomeNavigator(
     val toSearch: () -> Unit,
     val toDownloads: () -> Unit,
     val toStats: () -> Unit,
+    val toMix: (mixId: String) -> Unit,
 )
 
 fun NavGraphBuilder.homeScreen(navigator: HomeNavigator) {
@@ -128,7 +129,7 @@ internal fun HomeScreen(navigator: HomeNavigator, viewModel: HomeViewModel = hil
                 // Offline, what's on the device comes first; online it follows the server's mixes.
                 if (offline && downloadMixes.isNotEmpty()) {
                     item(key = "download-mixes") {
-                        DownloadMixes(downloadMixes, startingMix, viewModel::playMix, hint = true)
+                        DownloadMixes(downloadMixes, startingMix, viewModel::playMix, navigator.toMix, hint = true)
                     }
                 }
                 val error = feedState.error
@@ -144,7 +145,7 @@ internal fun HomeScreen(navigator: HomeNavigator, viewModel: HomeViewModel = hil
                 }
                 if (!offline && downloadMixes.isNotEmpty()) {
                     item(key = "download-mixes") {
-                        DownloadMixes(downloadMixes, startingMix, viewModel::playMix, hint = false)
+                        DownloadMixes(downloadMixes, startingMix, viewModel::playMix, navigator.toMix, hint = false)
                     }
                 }
                 if (activeDownloads > 0) {
@@ -162,6 +163,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.feedItems(
     onPlayMix: (Mix) -> Unit,
     navigator: HomeNavigator,
 ) {
+    val onOpenMix = navigator.toMix
     if (feed.mixes.isNotEmpty()) {
         item(key = "mixes") {
             SectionHeader(stringResource(R.string.home_mixes))
@@ -170,7 +172,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.feedItems(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 items(feed.mixes, key = { it.id }) { mix ->
-                    MixCard(mix, starting = startingMix == mix.id, onClick = { onPlayMix(mix) })
+                    MixCard(mix, starting = startingMix == mix.id, onClick = { onOpenMix(mix.id) }, onPlay = { onPlayMix(mix) })
                 }
             }
         }
@@ -189,7 +191,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.feedItems(
 }
 
 @Composable
-private fun DownloadMixes(mixes: List<Mix>, startingMix: String?, onPlayMix: (Mix) -> Unit, hint: Boolean) {
+private fun DownloadMixes(mixes: List<Mix>, startingMix: String?, onPlayMix: (Mix) -> Unit, onOpenMix: (String) -> Unit, hint: Boolean) {
     SectionHeader(stringResource(R.string.home_offline_mixes))
     if (hint) {
         Text(
@@ -204,7 +206,7 @@ private fun DownloadMixes(mixes: List<Mix>, startingMix: String?, onPlayMix: (Mi
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         items(mixes, key = { it.id }) { mix ->
-            MixCard(mix, starting = startingMix == mix.id, onClick = { onPlayMix(mix) })
+            MixCard(mix, starting = startingMix == mix.id, onClick = { onOpenMix(mix.id) }, onPlay = { onPlayMix(mix) })
         }
     }
 }

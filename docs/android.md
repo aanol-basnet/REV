@@ -217,7 +217,7 @@ at least three apart where possible. Offline mixes have ids starting `offline:` 
 _Offline_ badge.
 
 They appear on the Downloads tab and on Home, where they come first while the server can't be
-reached. Tapping a server mix on Home with no server rebuilds the same kind of mix from downloads
+reached. Opening or playing a server mix on Home with no server rebuilds the same kind of mix from downloads
 (artist radio around that artist and the artists it features, genre, Liked Songs, Discovery) and
 says so; only when nothing downloaded fits is the error shown.
 
@@ -243,8 +243,9 @@ library cache).
 
 Home shows the server's recommendations (see api.md → Home and mixes), cached in
 `filesDir/home_feed.json` so it opens instantly and works offline: a greeting over a colour wash
-from what you've been playing, six quick-access album tiles, **Made for you** mixes (tap to play;
-artist radios, genre mixes, Liked Songs, Discovery), rows such as _On repeat_, _Because you listen
+from what you've been playing, six quick-access album tiles, **Made for you** mixes (tap to open
+the mix's page with its songs, Play, Shuffle and Queue; the card's play button plays it straight
+away; artist radios, genre mixes, Liked Songs, Discovery), rows such as _On repeat_, _Because you listen
 to …_ (links to the artist), _More …_ (links to the genre), _Rediscover_ and _Not heard yet_, and
 your genres as chips, then **From your downloads** (offline mixes; first when offline). Pull to
 refresh rebuilds the recommendations. Tapping the tab you're already on returns to that tab's start.

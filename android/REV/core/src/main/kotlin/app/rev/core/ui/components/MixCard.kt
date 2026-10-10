@@ -34,9 +34,9 @@ import app.rev.core.ui.icons.RevIcons
 import app.rev.domain.model.Mix
 import app.rev.domain.model.MixKind
 
-/** A mix: a collage of what's in it, its name and who features. Tapping plays it. */
+/** A mix: a collage of what's in it, its name and who features. Tapping opens it; the play button plays it. */
 @Composable
-fun MixCard(mix: Mix, starting: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun MixCard(mix: Mix, starting: Boolean, onClick: () -> Unit, onPlay: () -> Unit, modifier: Modifier = Modifier) {
     val title = mixTitle(mix)
     CollageCard(
         coverArtIds = mix.coverArtIds,
@@ -49,6 +49,7 @@ fun MixCard(mix: Mix, starting: Boolean, onClick: () -> Unit, modifier: Modifier
         starting = starting,
         onClick = onClick,
         modifier = modifier,
+        onPlay = onPlay,
         badge = if (mix.isOffline) {
             { OfflineBadge() }
         } else {
@@ -86,7 +87,7 @@ fun CollageCard(
                 .aspectRatio(1f)
                 .clip(MaterialTheme.shapes.medium),
         ) {
-            Collage(coverArtIds)
+            CoverCollage(coverArtIds)
             // Darken the bottom so the label reads on any artwork.
             Box(
                 Modifier
@@ -158,7 +159,7 @@ private fun OfflineBadge() {
 
 /** One cover, or a 2×2 grid of four. */
 @Composable
-private fun Collage(coverArtIds: List<String>) {
+fun CoverCollage(coverArtIds: List<String>) {
     if (coverArtIds.size < 4) {
         Artwork(coverArtIds.firstOrNull(), ArtworkSize.CARD, null, shape = RectangleShape)
         return

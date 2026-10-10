@@ -27,6 +27,10 @@ data class PlaylistRoute(val id: String)
 @Serializable
 data class PlaylistEditRoute(val id: String)
 
+/** A Home or downloads mix, opened like a playlist. */
+@Serializable
+data class MixRoute(val id: String)
+
 /** Callbacks the library screens use to move around; the app decides how. */
 class LibraryNavigator(
     val toArtist: (id: String) -> Unit,
@@ -47,6 +51,7 @@ fun NavGraphBuilder.libraryScreens(navigator: LibraryNavigator) {
     composable<AlbumRoute> { AlbumScreen(navigator) }
     composable<GenreRoute> { GenreAlbumsScreen(navigator) }
     composable<PlaylistRoute> { PlaylistScreen(navigator) }
+    composable<MixRoute> { MixScreen(navigator) }
     composable<PlaylistEditRoute> { entry ->
         val id = entry.toRoute<PlaylistEditRoute>().id
         PlaylistEditScreen(onClose = navigator.back, onDeleted = { navigator.playlistDeleted(id) })

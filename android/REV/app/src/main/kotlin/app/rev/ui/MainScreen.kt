@@ -84,6 +84,7 @@ import app.rev.feature.library.ArtistSongsRoute
 import app.rev.feature.library.GenreRoute
 import app.rev.feature.library.LibraryNavigator
 import app.rev.feature.library.LibraryRoute
+import app.rev.feature.library.MixRoute
 import app.rev.feature.library.PlaylistEditRoute
 import app.rev.feature.library.PlaylistRoute
 import app.rev.feature.library.libraryScreens
@@ -282,6 +283,7 @@ private fun RevNavHost(navController: NavHostController, selectTab: (Tab) -> Uni
                 toSearch = { selectTab(Tab.Search) },
                 toDownloads = { selectTab(Tab.Downloads) },
                 toStats = { navController.navigate(StatsRoute) { launchSingleTop = true } },
+                toMix = { navController.navigate(MixRoute(it)) },
             ),
         )
         statsScreen(
@@ -301,6 +303,7 @@ private fun RevNavHost(navController: NavHostController, selectTab: (Tab) -> Uni
                 toPlaylist = navigator.toPlaylist,
                 toArtist = navigator.toArtist,
                 toArtistSongs = navigator.toArtistSongs,
+                toMix = { navController.navigate(MixRoute(it)) },
             ),
         )
         libraryScreens(navigator)

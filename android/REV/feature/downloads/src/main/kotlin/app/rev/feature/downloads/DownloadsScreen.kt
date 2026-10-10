@@ -91,6 +91,7 @@ class DownloadsNavigator(
     val toArtist: (artistId: String) -> Unit,
     /** Every song by an artist that's on the device (works offline). */
     val toArtistSongs: (artistId: String, name: String) -> Unit,
+    val toMix: (mixId: String) -> Unit,
 )
 
 fun NavGraphBuilder.downloadsScreen(navigator: DownloadsNavigator) {
@@ -141,7 +142,7 @@ internal fun DownloadsScreen(navigator: DownloadsNavigator, viewModel: Downloads
                         }
                     }
                     if (mixes.isNotEmpty()) {
-                        item(key = "mixes") { Mixes(mixes, startingMix, viewModel::playMix) }
+                        item(key = "mixes") { Mixes(mixes, startingMix, viewModel::playMix, navigator.toMix) }
                     }
                     item(key = "views") {
                         ViewChips(
@@ -225,7 +226,7 @@ private fun Summary(songCount: Int, storage: StorageUsage?, onPlay: () -> Unit, 
 }
 
 @Composable
-private fun Mixes(mixes: List<Mix>, startingMix: String?, onPlay: (Mix) -> Unit) {
+private fun Mixes(mixes: List<Mix>, startingMix: String?, onPlay: (Mix) -> Unit, onOpen: (String) -> Unit) {
     Column {
         SectionHeader(stringResource(R.string.downloads_mixes))
         LazyRow(
@@ -233,7 +234,7 @@ private fun Mixes(mixes: List<Mix>, startingMix: String?, onPlay: (Mix) -> Unit)
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             items(mixes, key = { it.id }) { mix ->
-                MixCard(mix, starting = startingMix == mix.id, onClick = { onPlay(mix) })
+                MixCard(mix, starting = startingMix == mix.id, onClick = { onOpen(mix.id) }, onPlay = { onPlay(mix) })
             }
         }
     }
