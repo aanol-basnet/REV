@@ -10,3 +10,4 @@ export * from './search.js';
 export * from './states.js';
 export * from './stats.js';
 export * from './system.js';
+export * from './model.js';

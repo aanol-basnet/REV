@@ -61,6 +61,14 @@ object RevIcons {
                 "l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z",
         )
     }
+    /** "Not now". */
+    val ThumbDown: ImageVector by lazy {
+        icon(
+            "ThumbDown",
+            "M15,3H6c-0.83,0 -1.54,0.5 -1.84,1.22l-3.02,7.05c-0.09,0.23 -0.14,0.47 -0.14,0.73v2c0,1.1 0.9,2 2,2h6.31l-0.95,4.57 -0.03,0.32c0,0.41 0.17,0.79 0.44,1.06L9.83,23l6.59,-6.59c0.36,-0.36 0.58,-0.86 0.58,-1.41V5c0,-1.1 -0.9,-2 -2,-2zM19,3v12h4V3h-4z",
+        )
+    }
+
     /** Sparkles: something the smart queue did. */
     val AutoAwesome: ImageVector by lazy {
         icon(

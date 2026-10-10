@@ -55,6 +55,9 @@ internal class SmartQueue(
     /** The current song was reached by skipping (or going back), so staying on it means something. */
     private var arrivedBySkip = false
     private var stayed = false
+
+    /** "Not now" was pressed on the current song: leaving it is that, whenever it happens. */
+    private var notNow = false
     private var watch: Job? = null
     private var work: Job? = null
 
@@ -77,7 +80,26 @@ internal class SmartQueue(
             }
         }
         stayed = false
+        notNow = false
         watchCurrent()
+    }
+
+    /** The "Not now" button: an early skip whenever it's pressed, and a strong one. The caller then skips. */
+    fun notNow() {
+        val track = player.currentMediaItem?.toTrack() ?: return
+        watch?.cancel()
+        session.record(track, Outcome.NotNow)
+        notNow = true
+    }
+
+    /** The "More like this" button: songs like this one next, even in an album or with the setting off. */
+    fun moreLikeThis() {
+        val track = player.currentMediaItem?.toTrack() ?: return
+        watch?.cancel()
+        stayed = true
+        session.record(track, Outcome.MoreLikeThis)
+        consider(Trigger.AskedForMore(track, streak.toList()), asked = true)
+        endStreak()
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -92,13 +114,15 @@ internal class SmartQueue(
 
     private fun left(track: Track, positionMs: Long) {
         val outcome = when {
+            notNow -> Outcome.NotNow
             stayed -> null
             isQuickSkip(track.durationMs, positionMs) -> Outcome.QuickSkip
             track.durationMs > 0 && positionMs < track.durationMs / 2 -> Outcome.LateSkip
             else -> Outcome.Played
         }
-        outcome?.let { session.record(track, it) }
-        if (outcome == Outcome.QuickSkip) {
+        // "Not now" was already recorded when pressed.
+        if (outcome != null && outcome != Outcome.NotNow) session.record(track, outcome)
+        if (outcome == Outcome.QuickSkip || outcome == Outcome.NotNow) {
             streak += track
             consider(Trigger.Skipped(streak.toList()))
         } else {
@@ -130,8 +154,8 @@ internal class SmartQueue(
         movedThisStreak = false
     }
 
-    private fun consider(trigger: Trigger) {
-        if (!enabled() || player.repeatMode != Player.REPEAT_MODE_OFF) return
+    private fun consider(trigger: Trigger, asked: Boolean = false) {
+        if (!(enabled() || asked) || player.repeatMode != Player.REPEAT_MODE_OFF) return
         val current = player.currentMediaItem?.toTrack() ?: return
         val queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toTrack() }
         val upcoming = upcomingIndices().map { queue[it] }
@@ -265,4 +289,10 @@ internal object QueueNotes {
         val change = extras.getString(CHANGE)?.let { name -> QueueChange.entries.firstOrNull { it.name == name } } ?: return null
         return QueueNote(change, extras.getString(TITLE).orEmpty()) to extras.getLong(AT)
     }
+}
+
+/** The feedback buttons, sent from the app, the notification or the lock screen to the playback service. */
+object FeedbackCommands {
+    val NOT_NOW = androidx.media3.session.SessionCommand("app.rev.feedback.NOT_NOW", android.os.Bundle.EMPTY)
+    val MORE_LIKE_THIS = androidx.media3.session.SessionCommand("app.rev.feedback.MORE_LIKE_THIS", android.os.Bundle.EMPTY)
 }

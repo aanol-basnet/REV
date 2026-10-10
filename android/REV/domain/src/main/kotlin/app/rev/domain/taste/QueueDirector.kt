@@ -102,6 +102,9 @@ sealed interface Trigger {
 
     /** You stayed on [track] after skipping your way to it ([streak]: the skips before). */
     data class Stayed(val track: Track, val streak: List<Track>) : Trigger
+
+    /** You pressed "More like this" on [track]. */
+    data class AskedForMore(val track: Track, val streak: List<Track>) : Trigger
 }
 
 /**
@@ -117,6 +120,7 @@ sealed interface Trigger {
  *   the next album, and eight start fresh.
  * - **Staying** on a song after skips: songs like it (more of the artist's songs like it, in an
  *   artist's queue), except in an album.
+ * - **More like this** (the button): the same, anywhere.
  */
 class QueueDirector(private val hour: () -> Int = { 12 }) {
 
@@ -139,6 +143,8 @@ class QueueDirector(private val hour: () -> Int = { 12 }) {
             } else {
                 null
             }
+            // Asked for, so even in an album.
+            is Trigger.AskedForMore -> stayed(trigger.track, trigger.streak, if (shape == QueueShape.Album) QueueShape.Mixed else shape, exclude)
         }
     }
 

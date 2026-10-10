@@ -1,5 +1,7 @@
 <resources>
     <string name="auto_recently_played">Recently played</string>
+    <string name="feedback_not_now">Not now</string>
+    <string name="feedback_more_like_this">More like this</string>
     <string name="auto_recently_added">Recently added</string>
     <string name="auto_playlists">Playlists</string>
     <string name="auto_downloaded">Downloaded</string>

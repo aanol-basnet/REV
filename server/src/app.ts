@@ -41,6 +41,11 @@ import { AutoplayService } from './home/autoplay.js';
 import { TopTracksService } from './library/top-tracks.js';
 import { homeRoutes } from './api/home.js';
 import { ListeningService } from './stats/service.js';
+import { ModelService } from './model/service.js';
+
+/** Personal skip models: first trained a minute after start, then checked for new data every few hours. */
+const MODEL_FIRST_TRAINING_MS = 60_000;
+const MODEL_TRAINING_INTERVAL_MS = 3 * 3_600_000;
 import { statsRoutes } from './api/stats.js';
 import { SmartPlaylistService } from './stats/smart-playlists.js';
 import { PlaylistService } from './library/playlists.js';
@@ -220,11 +225,32 @@ export async function buildApp({
   lyricsRoutes(app, authService, lyrics);
   authRoutes(app, authService);
   const listening = library ? new ListeningService(db, library, now) : null;
+  const models = listening ? new ModelService(db, now) : null;
+  if (models) {
+    // Retrain personal models as new listens and feedback come in.
+    const retrain = () => {
+      try {
+        const trained = models.trainWhereNeeded();
+        if (trained > 0) app.log.info({ trained }, 'personal skip models retrained');
+      } catch (err) {
+        app.log.warn({ err }, 'personal skip model training failed');
+      }
+    };
+    const first = setTimeout(retrain, MODEL_FIRST_TRAINING_MS);
+    const every = setInterval(retrain, MODEL_TRAINING_INTERVAL_MS);
+    first.unref();
+    every.unref();
+    app.addHook('onClose', async () => {
+      clearTimeout(first);
+      clearInterval(every);
+    });
+  }
   statsRoutes(
     app,
     authService,
     listening,
     library ? new SmartPlaylistService(db, library, new PlaylistService(library), now) : null,
+    models,
   );
   libraryRoutes(
     app,

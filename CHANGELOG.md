@@ -3,6 +3,19 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.6.0 — 2026-10-10
+
+### New
+
+- **Not now** and **More like this** buttons in the player, next to Lyrics, and on the
+  notification and lock screen. Not now skips the song and tells REV it's not what you want right
+  now. More like this lines up songs like the one playing, in any queue.
+- **REV now has its own AI that learns your taste.** It predicts which songs you'd skip in the
+  situation you're in (time, where you're listening, what you've been skipping), and the smart
+  queue and autoplay use it to pick what plays next. The more you listen, the more say it gets.
+- It learns on your phone from every song and every button press, even offline, and your server
+  trains it on your whole history every few hours. Nothing leaves your own server.
+
 ## 0.5.0 — 2026-10-10
 
 ### New

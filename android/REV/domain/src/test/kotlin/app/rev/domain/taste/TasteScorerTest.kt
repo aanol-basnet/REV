@@ -56,4 +56,16 @@ class TasteScorerTest {
         assertEquals(songs.toSet(), one.toSet())
         assertTrue(one != scorer.rank(songs, Random(2)))
     }
+
+    @Test
+    fun `the personal model's say grows with what it has learned`() {
+        val songs = listOf(song("a", artist = "A"), song("b", artist = "B"))
+        val chances = mapOf("a" to 0.9, "b" to 0.1)
+        val unsure = TasteScorer(SessionTaste(), TasteProfile(), 12, chances, modelWeight = 0.0)
+        assertEquals(unsure.score(songs[0]), unsure.score(songs[1]), 1e-9)
+        val trusted = TasteScorer(SessionTaste(), TasteProfile(), 12, chances, modelWeight = TasteScorer.MODEL_WEIGHT)
+        assertEquals(listOf("b", "a"), trusted.rank(songs, temperature = 0.0).map { it.id })
+        // The hand-tuned score, logged to compare against, leaves the model out.
+        assertEquals(trusted.handScore(songs[0]), trusted.handScore(songs[1]), 1e-9)
+    }
 }

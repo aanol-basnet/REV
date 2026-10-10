@@ -67,6 +67,8 @@ export const ListenContext = z.looseObject({
   favoritedDuring: z.boolean().nullish(),
   /** The smart queue's score for the song when it started: its guess, to compare with what you did. */
   predictedScore: z.number().min(-100).max(100).nullish(),
+  /** The phone's personal model's chance of skipping it, when it started. */
+  predictedSkip: z.number().min(0).max(1).nullish(),
 });
 export type ListenContext = z.infer<typeof ListenContext>;
 

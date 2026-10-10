@@ -47,6 +47,8 @@ class PlayerViewModel @Inject constructor(
 
     fun togglePlayPause() = playback.togglePlayPause()
     fun next() = playback.next()
+    fun notNow() = playback.notNow()
+    fun moreLikeThis() = playback.moreLikeThis()
     fun previous() = playback.previous()
     fun seekTo(positionMs: Long) = playback.seekTo(positionMs)
     fun toggleShuffle() = playback.toggleShuffle()

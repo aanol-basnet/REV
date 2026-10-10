@@ -36,10 +36,18 @@ internal class PlayReportTracker(
     private val clock: () -> Long = System::currentTimeMillis,
     private val device: () -> DeviceSnapshot? = { null },
     private val predict: suspend (Track) -> Double? = { null },
+    /** The personal skip model's chance of skipping the song as it starts. */
+    private val predictSkip: suspend (Track, ListenContext) -> Double? = { _, _ -> null },
+    /** Each song as it starts: the situation for ranking what comes next. */
+    private val onStart: (ListenContext) -> Unit = {},
+    /** Each play or skip once logged, to learn from (not when a feedback button already said more). */
+    private val onListen: (Track, ListenContext, Long, Boolean) -> Unit = { _, _, _, _ -> },
     private val favoriteChanges: Flow<Pair<String, Boolean>>? = null,
     private val utcOffsetMinutes: (Long) -> Int = { TimeZone.getDefault().getOffset(it) / 60_000 },
 ) : Player.Listener {
     private var trackId: String? = null
+    private var track: Track? = null
+    private var feedbackGiven = false
     private var durationMs = 0L
     private var startedAt = 0L
     private var listenedMs = 0L
@@ -117,6 +125,8 @@ internal class PlayReportTracker(
         }
         trackId = id
         val track = mediaItem?.toTrack()
+        this.track = track
+        feedbackGiven = false
         durationMs = track?.durationMs ?: 0
         startedAt = clock()
         listenedMs = 0
@@ -146,7 +156,7 @@ internal class PlayReportTracker(
         val shuffle = player.shuffleModeEnabled
         val queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toTrack() }
         val snapshot = runCatching { device() }.getOrNull()
-        context = ListenContext(
+        val started = ListenContext(
             source = source,
             smartChange = change,
             queueShape = when (QueueShape.of(queue, shuffle)) {
@@ -167,11 +177,14 @@ internal class PlayReportTracker(
             favorite = track.starred,
             device = snapshot,
         )
+        context = started
+        onStart(started)
         sessionPosition += 1
         val id = track.id
         scope.launch {
             val score = runCatching { predict(track) }.getOrNull()
-            if (trackId == id) context = context?.copy(predictedScore = score)
+            val skip = runCatching { predictSkip(track, started) }.getOrNull()
+            if (trackId == id) context = context?.copy(predictedScore = score, predictedSkip = skip)
         }
     }
 
@@ -212,6 +225,7 @@ internal class PlayReportTracker(
         val heard = listenedMs
         val ctx = finalContext(leftAtMs)?.copy(endReason = reason)
         scope.launch { reporter.skipped(id, started, heard, ctx) }
+        learnFrom(ctx, skipped = true)
     }
 
     private fun maybeReportPlayed() {
@@ -222,6 +236,25 @@ internal class PlayReportTracker(
         val started = startedAt
         val ctx = finalContext(player.currentPosition)
         scope.launch { reporter.played(id, started, ctx) }
+        learnFrom(ctx, skipped = false)
+    }
+
+    private fun learnFrom(ctx: ListenContext?, skipped: Boolean) {
+        val t = track ?: return
+        if (ctx != null && !feedbackGiven) onListen(t, ctx, startedAt, skipped)
+    }
+
+    /** The listen a feedback button is about: the song playing, when it started, where it is now. */
+    data class FeedbackListen(val track: Track, val startedAt: Long, val positionMs: Long, val context: ListenContext?)
+
+    /**
+     * A feedback button was pressed: it's what to learn from for this listen (more than how it
+     * ends), so the play or skip that follows isn't learned from again.
+     */
+    fun feedbackGiven(): FeedbackListen? {
+        val t = track ?: return null
+        feedbackGiven = true
+        return FeedbackListen(t, startedAt, player.currentPosition, finalContext(player.currentPosition))
     }
 
     /** The context with what you did up to now: where you were in the song, pauses, volume. */

@@ -49,6 +49,7 @@ One row per listen, oldest first. Booleans are `1`/`0` in CSV; empty means unkno
 | Column                                                         | Meaning                                      |
 | -------------------------------------------------------------- | -------------------------------------------- |
 | `session_id`, `session_position`                               | Sessions break after 30 min without a listen |
+| `session_skips_before`                                         | Skips earlier in the session                 |
 | `previous_track_id`, `previous_kind`, `minutes_since_previous` | The listen before, within the session        |
 | `track_plays_before`, `track_skips_before`                     | Your history with this song up to then       |
 | `artist_plays_before`, `artist_skips_before`                   | Your history with this artist up to then     |
@@ -71,9 +72,38 @@ One row per listen, oldest first. Booleans are `1`/`0` in CSV; empty means unkno
 | `seeks_back`, `seeked_back_ms`         | Going back within the song (replaying a part you love)                                                                      |
 | `pauses`, `paused_ms`                  | Pauses you made                                                                                                             |
 | `predicted_score`                      | The smart queue's score for the song when it started: compare its guess with what you did                                   |
+| `predicted_skip`                       | The phone's personal model's chance of skipping it when it started                                                          |
+| `feedback`                             | A feedback button pressed during it: `not_now` or `more_like_this`                                                          |
 
 Plays are logged once they count (half the song or 4 minutes), so for plays the behaviour
 columns cover the song up to that point.
+
+## The personal skip model
+
+REV already trains one model from this data: logistic regression predicting "will you skip it",
+over named features of the song, the situation and your history, plus combinations such as an
+artist in the car or a genre late at night (`server/src/model/features.ts`, the same in the app's
+`SkipFeatures.kt`; `shared/model/feature-fixtures.json` keeps them identical).
+
+- **Labels:** a skip is 1, a play 0; "Not now" is 1 and "More like this" 0, counting double.
+- **Training** (server): AdaGrad with a little L2. It first trains on all but the newest 20% of
+  listens and tests on those, then trains on everything. The server retrains a minute after it
+  starts and then every 3 hours when there's anything new. To run it by hand and see how it does:
+
+  ```sh
+  cd server
+  npm run train-model -- <username>          # or: node dist/cli/train-model.js <username>
+  ```
+
+  It prints log loss against always guessing the usual skip rate, AUC (0.5 chance, 1 perfect)
+  next to the smart queue's hand-tuned score and the phone model's own guesses, and the strongest
+  signals it found.
+
+- **On the phone:** the app fetches the model (`GET /api/stats/model`, cached for offline use)
+  and keeps training it with every listen and feedback button, the same way, online or offline.
+  It keeps those examples, so when a newer model arrives it replays the ones that model hasn't
+  seen (`dataUntil`). The smart queue and autoplay add the model's chance of a skip to their
+  score, with more say the more it has learned (full say from 1,000 listens).
 
 ## Notes for training
 

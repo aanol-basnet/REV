@@ -282,6 +282,18 @@ boundaries follow `tz` (IANA, default UTC). The report (`ListeningReport` in
 | `timeline`                                          | Per day (week, month) or per month (year, all time), each with its top genre and artist                       |
 | `streaks`, `sessions`, `variety`                    | Consecutive days, listening sessions (30 min gap), how spread out your artists were (0–100)                   |
 
+### Feedback and the personal skip model
+
+- `POST /api/stats/feedback` `{ events: [{ trackId, listenStartedAt, kind, at, positionMs? }] }`:
+  the player's "Not now" (`not_now`) and "More like this" (`more_like_this`) buttons, about the
+  listen that started at `listenStartedAt`. Resends are ignored: `{ recorded, duplicates }`.
+- `GET /api/stats/model`: `{ model }`, the latest personal skip model or null:
+  `{ version: 1, trainedAt, dataUntil, examples, bias, weights: { feature: weight }, metrics }`,
+  where `metrics` (null with too few listens) is `{ holdout, logLoss, baselineLogLoss, auc,
+smartQueueAuc, phoneModelAuc }` from testing on the newest listens. See
+  [training-data.md](training-data.md).
+- `POST /api/stats/model/train`: trains now and returns `{ model }` (null below 50 listens).
+
 ### `GET /api/stats/taste?tz=Europe/Berlin`
 
 What the app's smart queue knows about your listening, from the last two years of the log

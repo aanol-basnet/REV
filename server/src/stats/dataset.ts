@@ -32,7 +32,12 @@ const EARLY_SKIP_MS = 30_000;
  * before the app sent context are still useful: local time, the session, the song before, and how
  * often you'd played or skipped this song and artist before.
  */
-export function buildDataset(rows: LogRow[], zone: Zone): DatasetRecord[] {
+export function buildDataset(
+  rows: LogRow[],
+  zone: Zone,
+  /** Feedback per listen, keyed by [listenKey]. */
+  feedback: Map<string, string> = new Map(),
+): DatasetRecord[] {
   const sorted = [...rows].sort((a, b) => a.startedAt - b.startedAt);
   const trackPlays = new Map<string, number>();
   const trackSkips = new Map<string, number>();
@@ -41,6 +46,7 @@ export function buildDataset(rows: LogRow[], zone: Zone): DatasetRecord[] {
   const out: DatasetRecord[] = [];
   let session = 0;
   let sessionPosition = 0;
+  let sessionSkips = 0;
   let previous: LogRow | null = null;
 
   for (const row of sorted) {
@@ -48,6 +54,7 @@ export function buildDataset(rows: LogRow[], zone: Zone): DatasetRecord[] {
     if (gap > SESSION_GAP_MS) {
       session += 1;
       sessionPosition = 0;
+      sessionSkips = 0;
     }
     const context = parseContext(row.context);
     // The phone's own offset when it sent one, else the zone asked for.
@@ -84,6 +91,7 @@ export function buildDataset(rows: LogRow[], zone: Zone): DatasetRecord[] {
       early_skip: skipped && row.listenedMs < EARLY_SKIP_MS,
       session_id: session,
       session_position: sessionPosition,
+      session_skips_before: sessionSkips,
       previous_track_id: gap > SESSION_GAP_MS ? null : (previous?.trackId ?? null),
       previous_kind: gap > SESSION_GAP_MS ? null : (previous?.kind ?? null),
       minutes_since_previous: Number.isFinite(gap) ? round(gap / 60_000) : null,
@@ -119,8 +127,10 @@ export function buildDataset(rows: LogRow[], zone: Zone): DatasetRecord[] {
       volume_end: context?.volumeEnd ?? null,
       favorited_during: context?.favoritedDuring ?? null,
       predicted_score: context?.predictedScore ?? null,
+      predicted_skip: context?.predictedSkip ?? null,
       previous_outcome: context?.previousOutcome ?? null,
       session_skips: context?.sessionSkips ?? null,
+      feedback: feedback.get(listenKey(row.trackId, row.startedAt)) ?? null,
     });
 
     (skipped ? trackSkips : trackPlays).set(
@@ -132,9 +142,15 @@ export function buildDataset(rows: LogRow[], zone: Zone): DatasetRecord[] {
       ((skipped ? artistSkips : artistPlays).get(artistKey) ?? 0) + 1,
     );
     sessionPosition += 1;
+    if (skipped) sessionSkips += 1;
     previous = row;
   }
   return out;
+}
+
+/** Identifies one listen: a song and when it started. */
+export function listenKey(trackId: string, startedAt: number): string {
+  return `${trackId}@${startedAt}`;
 }
 
 /** Records as CSV with a header; text is quoted when it needs to be. */

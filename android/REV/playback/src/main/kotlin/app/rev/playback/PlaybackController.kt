@@ -150,6 +150,12 @@ class PlaybackController @Inject constructor(
         play()
     }
 
+    /** "Not now": skips the song and teaches the personal model you didn't want it now. */
+    fun notNow() = command { sendCustomCommand(FeedbackCommands.NOT_NOW, Bundle.EMPTY) }
+
+    /** "More like this": songs like it next, and the personal model learns you wanted it. */
+    fun moreLikeThis() = command { sendCustomCommand(FeedbackCommands.MORE_LIKE_THIS, Bundle.EMPTY) }
+
     fun toggleShuffle() = command { shuffleModeEnabled = !shuffleModeEnabled }
 
     fun cycleRepeat() = command {

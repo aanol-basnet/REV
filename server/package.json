@@ -15,7 +15,9 @@
     "user": "tsx src/cli/user.ts",
     "user:prod": "node dist/cli/user.js",
     "export-listens": "tsx src/cli/export-listens.ts",
-    "export-listens:prod": "node dist/cli/export-listens.js"
+    "export-listens:prod": "node dist/cli/export-listens.js",
+    "train-model": "tsx src/cli/train-model.ts",
+    "train-model:prod": "node dist/cli/train-model.js"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.2.0",

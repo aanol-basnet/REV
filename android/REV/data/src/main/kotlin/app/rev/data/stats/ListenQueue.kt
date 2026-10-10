@@ -4,6 +4,8 @@ import androidx.room.withTransaction
 import app.rev.data.local.RevDatabase
 import app.rev.data.local.stats.PendingListenEntity
 import app.rev.data.remote.LibraryApi
+import app.rev.data.local.stats.PendingFeedbackEntity
+import app.rev.data.remote.FeedbackEventDto
 import app.rev.data.remote.ListenContextDto
 import app.rev.data.remote.ListenDto
 import app.rev.data.remote.RevJson
@@ -27,6 +29,7 @@ class ListenQueue(
     private val api: LibraryApi,
 ) {
     private val dao = db.pendingListenDao()
+    private val feedbackDao = db.pendingFeedbackDao()
     private val sending = Mutex()
 
     internal suspend fun add(trackId: String, startedAt: Long, kind: String, listenedMs: Long?, context: ListenContextDto? = null) {
@@ -35,10 +38,16 @@ class ListenQueue(
         flush()
     }
 
+    suspend fun addFeedback(trackId: String, listenStartedAt: Long, kind: String, at: Long, positionMs: Long?) {
+        feedbackDao.insert(PendingFeedbackEntity(trackId, listenStartedAt, kind, at, positionMs))
+        flush()
+    }
+
     /** Sends whatever is waiting; stops at the first failure and keeps the rest for later. */
     suspend fun flush() {
         if (!sending.tryLock()) return // already sending; it picks up new rows too
         try {
+            // Listens first: feedback is about them.
             while (true) {
                 val batch = dao.oldest(BATCH)
                 if (batch.isEmpty()) return
@@ -47,6 +56,17 @@ class ListenQueue(
                     result is Result.Ok -> remove(batch)
                     // The server will never take these (e.g. rejected as invalid): don't block the rest.
                     result is Result.Err && result.error is LibraryError.Unexpected -> remove(batch)
+                    else -> return
+                }
+            }
+            while (true) {
+                val batch = feedbackDao.oldest(BATCH)
+                if (batch.isEmpty()) return
+                val result = api.feedback(batch.map { FeedbackEventDto(it.trackId, it.listenStartedAt, it.kind, it.at, it.positionMs) })
+                when {
+                    result is Result.Ok || (result is Result.Err && result.error is LibraryError.Unexpected) -> db.withTransaction {
+                        batch.forEach { feedbackDao.delete(it.trackId, it.listenStartedAt, it.kind) }
+                    }
                     else -> return
                 }
             }

@@ -1,6 +1,7 @@
 package app.rev.data.playback
 
 import app.rev.data.remote.toDto
+import app.rev.domain.playback.FeedbackKind
 import app.rev.domain.playback.ListenContext
 import app.rev.data.local.offline.OfflineTrackDao
 import app.rev.data.remote.LibraryApi
@@ -52,5 +53,9 @@ class PlaybackReporterImpl(private val api: LibraryApi, private val listens: Lis
 
     override suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext?) {
         listens.add(trackId, startedAt, kind = "skip", listenedMs = listenedMs, context = context?.toDto())
+    }
+
+    override suspend fun feedback(trackId: String, listenStartedAt: Long, kind: FeedbackKind, positionMs: Long) {
+        listens.addFeedback(trackId, listenStartedAt, kind.wire, System.currentTimeMillis(), positionMs)
     }
 }

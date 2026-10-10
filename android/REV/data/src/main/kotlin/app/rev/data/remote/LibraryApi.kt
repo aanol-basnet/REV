@@ -249,6 +249,18 @@ class LibraryApi(
             parameter("tz", timeZone)
         }) { it }
 
+    internal suspend fun feedback(events: List<FeedbackEventDto>): Result<Unit, LibraryError> =
+        send("stats/feedback", { url ->
+            http.client.post(url) {
+                contentType(ContentType.Application.Json)
+                setBody(FeedbackBatchDto(events))
+            }
+        }) { }
+
+    /** Your personal skip model as last trained by the server; null before it has trained one. */
+    internal suspend fun skipModel(): Result<SkipModelDto?, LibraryError> =
+        get<SkipModelResponseDto, _>("stats/model") { it.model }
+
     /** What the smart queue knows about your listening (`GET /api/stats/taste`). */
     internal suspend fun taste(timeZone: String): Result<TasteProfileDto, LibraryError> =
         get<TasteProfileDto, _>("stats/taste", { parameter("tz", timeZone) }) { it }

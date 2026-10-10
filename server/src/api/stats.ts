@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
+  FeedbackBatch,
+  FeedbackBatchResult,
   ListenBatch,
   ListenBatchResult,
   ListeningReport,
@@ -9,12 +11,14 @@ import {
   SmartPlaylistDetail,
   SmartPlaylistId,
   SmartPlaylistQuery,
+  SkipModelResponse,
   SmartPlaylists,
   TasteProfile,
   TasteQuery,
 } from '@rev/schemas';
 import { authOf, requireAuth } from '../auth/middleware.js';
 import type { AuthService } from '../auth/service.js';
+import type { ModelService } from '../model/service.js';
 import type { ListeningService } from '../stats/service.js';
 import type { SmartPlaylistService } from '../stats/smart-playlists.js';
 import { HttpError } from './errors.js';
@@ -25,6 +29,7 @@ export function statsRoutes(
   auth: AuthService,
   listening: ListeningService | null,
   smart: SmartPlaylistService | null,
+  models: ModelService | null = null,
 ): void {
   const preHandler = requireAuth(auth);
   const service = (): ListeningService => {
@@ -40,6 +45,11 @@ export function statsRoutes(
     return smart;
   };
   const SmartParams = z.object({ id: SmartPlaylistId });
+  const model = (): ModelService => {
+    if (!models)
+      throw new HttpError(503, 'NAVIDROME_NOT_CONFIGURED', 'Music server is not configured');
+    return models;
+  };
 
   // What the app heard: completed plays and skips, possibly queued while offline.
   app.post('/api/stats/listens', { preHandler }, async (req) => {
@@ -50,6 +60,21 @@ export function statsRoutes(
   app.get('/api/stats/report', { preHandler }, async (req) => {
     const query = parseInput(ReportQuery, req.query);
     return ListeningReport.parse(service().report(authOf(req).userId, query));
+  });
+
+  // Feedback buttons in the player, about one listen.
+  app.post('/api/stats/feedback', { preHandler }, async (req) => {
+    const { events } = parseInput(FeedbackBatch, req.body);
+    return FeedbackBatchResult.parse(model().recordFeedback(authOf(req).userId, events));
+  });
+
+  // The personal skip model: the latest one, or trained now.
+  app.get('/api/stats/model', { preHandler }, async (req) => {
+    return SkipModelResponse.parse({ model: model().latest(authOf(req).userId) });
+  });
+
+  app.post('/api/stats/model/train', { preHandler }, async (req) => {
+    return SkipModelResponse.parse({ model: model().train(authOf(req).userId) });
   });
 
   // What the app's smart queue learns from: scores per artist, genre, decade, song and time of day.

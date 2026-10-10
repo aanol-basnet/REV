@@ -15,6 +15,12 @@ enum class Outcome(val weight: Double) {
 
     /** Skipped to (or went back to) and stayed on: what you were looking for. */
     Stayed(1.5),
+
+    /** The "Not now" button. */
+    NotNow(-2.0),
+
+    /** The "More like this" button. */
+    MoreLikeThis(2.0),
 }
 
 data class Signal(val track: Track, val outcome: Outcome, val at: Long)

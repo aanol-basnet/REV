@@ -16,4 +16,6 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
+    // Reads the feature fixtures shared with the server.
+    testImplementation(libs.kotlinx.serialization.json)
 }

@@ -21,6 +21,10 @@ import app.rev.domain.playback.PlaybackReporter
 import app.rev.domain.playback.QueueStore
 import app.rev.domain.playback.TrackSourceResolver
 import android.content.Context
+import app.rev.data.local.RevDatabase
+import app.rev.data.stats.PersonalModelImpl
+import app.rev.domain.learning.CurrentSituation
+import app.rev.domain.learning.PersonalModel
 import app.rev.data.stats.TasteRepositoryImpl
 import app.rev.domain.taste.ListeningSession
 import app.rev.domain.taste.TasteRanker
@@ -83,8 +87,24 @@ object PlaybackDataModule {
 
     @Provides
     @Singleton
-    fun provideTasteRanker(session: ListeningSession, taste: TasteRepository): TasteRanker =
-        TasteRanker(session, taste, hour = { LocalTime.now().hour })
+    fun provideTasteRanker(
+        session: ListeningSession,
+        taste: TasteRepository,
+        model: PersonalModel,
+        situation: CurrentSituation,
+    ): TasteRanker = TasteRanker(session, taste, hour = { LocalTime.now().hour }, model = model, situation = situation)
+
+    @Provides
+    @Singleton
+    fun provideCurrentSituation(): CurrentSituation = CurrentSituation()
+
+    @Provides
+    @Singleton
+    fun providePersonalModelImpl(@ApplicationContext context: Context, api: LibraryApi, db: RevDatabase): PersonalModelImpl =
+        PersonalModelImpl(api::skipModel, db.learnedExampleDao(), File(context.filesDir, "skip_model.json"))
+
+    @Provides
+    fun providePersonalModel(impl: PersonalModelImpl): PersonalModel = impl
 
     @Provides
     @Singleton

@@ -1,5 +1,6 @@
 package app.rev.data.remote
 
+import app.rev.domain.learning.SkipModel
 import app.rev.domain.playback.ListenContext
 import app.rev.domain.taste.Daypart
 import app.rev.domain.taste.TasteProfile
@@ -79,6 +80,7 @@ internal data class ListenContextDto(
     val volumeEnd: Double?,
     val favoritedDuring: Boolean?,
     val predictedScore: Double?,
+    val predictedSkip: Double?,
 )
 
 internal fun ListenContext.toDto() = ListenContextDto(
@@ -114,7 +116,28 @@ internal fun ListenContext.toDto() = ListenContextDto(
     volumeEnd = behaviour.volumeEnd?.let { kotlin.math.round(it * 1000) / 1000 },
     favoritedDuring = behaviour.favoritedDuring,
     predictedScore = predictedScore?.let { kotlin.math.round(it * 1000) / 1000 },
+    predictedSkip = predictedSkip?.let { kotlin.math.round(it * 1000) / 1000 },
 )
+
+@Serializable
+internal data class FeedbackEventDto(val trackId: String, val listenStartedAt: Long, val kind: String, val at: Long, val positionMs: Long? = null)
+
+@Serializable
+internal data class FeedbackBatchDto(val events: List<FeedbackEventDto>)
+
+@Serializable
+internal data class SkipModelDto(
+    val trainedAt: Long,
+    val dataUntil: Long,
+    val examples: Int,
+    val bias: Double,
+    val weights: Map<String, Double>,
+) {
+    fun toDomain() = SkipModel(trainedAt, dataUntil, examples, bias, weights)
+}
+
+@Serializable
+internal data class SkipModelResponseDto(val model: SkipModelDto? = null)
 
 /** Version of the context shape; bump when fields change meaning. */
 internal const val CONTEXT_VERSION = 1

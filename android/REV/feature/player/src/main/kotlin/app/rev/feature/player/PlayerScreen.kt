@@ -121,9 +121,7 @@ internal fun PlayerScreen(navigator: PlayerNavigator, viewModel: PlayerViewModel
                 }
                 Spacer(Modifier.height(8.dp))
                 Transport(state, viewModel)
-                TextButton(onClick = navigator.openLyrics, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.player_lyrics).uppercase(), style = MaterialTheme.typography.labelLarge)
-                }
+                BottomActions(onNotNow = viewModel::notNow, onLyrics = navigator.openLyrics, onMoreLikeThis = viewModel::moreLikeThis)
             }
             if (landscape) {
                 // Wide screens: artwork beside the controls instead of above them.
@@ -210,6 +208,26 @@ private fun TrackInfo(
             )
         }
         FavoriteButton(favorite, onFavoriteChange)
+    }
+}
+
+/** Feedback that teaches REV your taste, either side of the lyrics. */
+@Composable
+private fun BottomActions(onNotNow: () -> Unit, onLyrics: () -> Unit, onMoreLikeThis: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = onNotNow) {
+            Icon(RevIcons.ThumbDown, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.player_not_now), style = MaterialTheme.typography.labelLarge)
+        }
+        TextButton(onClick = onLyrics) {
+            Text(stringResource(R.string.player_lyrics).uppercase(), style = MaterialTheme.typography.labelLarge)
+        }
+        TextButton(onClick = onMoreLikeThis) {
+            Icon(RevIcons.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.player_more_like_this), style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 

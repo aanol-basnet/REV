@@ -6,6 +6,15 @@ import android.os.Bundle
 import app.rev.domain.playback.FavoriteEvents
 import app.rev.domain.playback.QueueSource
 import app.rev.domain.taste.ListeningSession
+import app.rev.domain.learning.CurrentSituation
+import app.rev.domain.learning.ListenFeatures
+import app.rev.domain.learning.PersonalModel
+import app.rev.domain.learning.Situation
+import app.rev.domain.playback.FeedbackKind
+import app.rev.domain.playback.ListenContext
+import androidx.media3.session.CommandButton
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import app.rev.domain.taste.QueueDirector
 import app.rev.domain.taste.TasteRanker
 import app.rev.domain.taste.TasteRepository
@@ -86,6 +95,9 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var taste: TasteRepository
     @Inject lateinit var ranker: TasteRanker
     @Inject lateinit var favoriteEvents: FavoriteEvents
+    @Inject lateinit var personalModel: PersonalModel
+    @Inject lateinit var situation: CurrentSituation
+    private lateinit var smartQueue: SmartQueue
 
     /** Android Auto is connected: listening in the car. */
     @Volatile private var carConnected = false
@@ -151,14 +163,17 @@ class PlaybackService : MediaLibraryService() {
 
         queuePersister = QueuePersister(player, queueStore, scope) { it.systemArtworkUri() }.also { it.start() }
         AutoplayExtender(player, scope, autoplay, enabled = { settings.autoplay }, toItem = { queueItem(it, QueueSource.Autoplay) }).start()
-        SmartQueue(
+        smartQueue = SmartQueue(
             player, scope, autoplay, listeningSession, taste, ranker, QueueDirector(hour = { LocalTime.now().hour }),
             enabled = { settings.smartQueue },
             toItem = { track, change -> queueItem(track, QueueSource.Smart, change.name) },
             onChange = ::publishQueueNote,
-        ).start()
-        // Have the taste profile ready (and fresh) before the first skip.
-        scope.launch { runCatching { taste.profile() } }
+        ).also { it.start() }
+        // Have the taste profile and personal model ready (and fresh) before the first skip.
+        scope.launch {
+            runCatching { taste.profile() }
+            runCatching { personalModel.refresh() }
+        }
 
         tree = LibraryTree(
             libraryRepository,
@@ -182,7 +197,10 @@ class PlaybackService : MediaLibraryService() {
             reporter,
             scope,
             device = deviceState::snapshot,
-            predict = { track -> ranker.scorer().score(track) },
+            predict = { track -> ranker.scorer().handScore(track) },
+            predictSkip = { track, context -> personalModel.skipChance(ListenFeatures.of(track, context, System.currentTimeMillis(), taste.profile())) },
+            onStart = { situation.value = Situation.of(it) },
+            onListen = { track, context, startedAt, skipped -> learn(track, context, startedAt, skipped, weight = 1.0) },
             favoriteChanges = favoriteEvents.changes,
         ).also { it.start() }
         scope.launch {
@@ -193,6 +211,7 @@ class PlaybackService : MediaLibraryService() {
         }
         mediaSession = MediaLibrarySession.Builder(this, sessionPlayer, SessionCallback())
             .setBitmapLoader(CoilBitmapLoader(this, scope, artworkUrls))
+            .setMediaButtonPreferences(feedbackButtons())
             .apply { launchAppIntent()?.let(::setSessionActivity) }
             .build()
 
@@ -249,6 +268,51 @@ class PlaybackService : MediaLibraryService() {
             runCatching { NowPlayingWidget.publish(applicationContext, state.copy(artworkPath = art?.path, accent = art?.accent)) }
         }
     }
+
+    /** The personal model learns from a listen (or a feedback button, which counts double), offline too. */
+    private fun learn(track: Track, context: ListenContext, startedAt: Long, skipped: Boolean, weight: Double) {
+        scope.launch {
+            runCatching {
+                personalModel.learn(ListenFeatures.of(track, context, startedAt, taste.profile()), skipped, weight, startedAt)
+                personalModel.refresh()
+            }
+        }
+    }
+
+    /** "Not now": skip it, and remember that strongly. */
+    private fun notNow() {
+        val player = mediaSession?.player ?: return
+        val listen = playReports.feedbackGiven() ?: return
+        smartQueue.notNow()
+        feedback(listen, FeedbackKind.NotNow, skipped = true)
+        player.seekToNextMediaItem()
+    }
+
+    /** "More like this": songs like it next, and remember that strongly. */
+    private fun moreLikeThis() {
+        val listen = playReports.feedbackGiven() ?: return
+        smartQueue.moreLikeThis()
+        feedback(listen, FeedbackKind.MoreLikeThis, skipped = false)
+    }
+
+    private fun feedback(listen: PlayReportTracker.FeedbackListen, kind: FeedbackKind, skipped: Boolean) {
+        scope.launch { reporter.feedback(listen.track.id, listen.startedAt, kind, listen.positionMs) }
+        listen.context?.let { learn(listen.track, it, listen.startedAt, skipped, weight = FEEDBACK_WEIGHT) }
+    }
+
+    /** The feedback buttons on the notification and lock screen, after the usual controls. */
+    private fun feedbackButtons(): ImmutableList<CommandButton> = ImmutableList.of(
+        CommandButton.Builder(CommandButton.ICON_THUMB_DOWN_UNFILLED)
+            .setDisplayName(getString(R.string.feedback_not_now))
+            .setSessionCommand(FeedbackCommands.NOT_NOW)
+            .setSlots(CommandButton.SLOT_OVERFLOW)
+            .build(),
+        CommandButton.Builder(CommandButton.ICON_THUMB_UP_UNFILLED)
+            .setDisplayName(getString(R.string.feedback_more_like_this))
+            .setSessionCommand(FeedbackCommands.MORE_LIKE_THIS)
+            .setSlots(CommandButton.SLOT_OVERFLOW)
+            .build(),
+    )
 
     /** Tells the app (through the session's extras) what the smart queue just changed. */
     private fun publishQueueNote(note: QueueNote) {
@@ -340,6 +404,28 @@ class PlaybackService : MediaLibraryService() {
                 val (tracks, start) = tree.resolve(single.mediaId)
                 MediaItemsWithStartPosition(tracks.map { queueItem(it, QueueSource.Car) }, start, C.TIME_UNSET)
             }
+        }
+
+        override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+            val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                .add(FeedbackCommands.NOT_NOW)
+                .add(FeedbackCommands.MORE_LIKE_THIS)
+                .build()
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session).setAvailableSessionCommands(commands).build()
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            when (customCommand.customAction) {
+                FeedbackCommands.NOT_NOW.customAction -> notNow()
+                FeedbackCommands.MORE_LIKE_THIS.customAction -> moreLikeThis()
+                else -> return super.onCustomCommand(session, controller, customCommand, args)
+            }
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
 
         override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
@@ -441,6 +527,7 @@ class PlaybackService : MediaLibraryService() {
         const val TAG = "PlaybackService"
         const val CAST_TOKEN_CHECK_MS = 30 * 60_000L
         const val WIDGET_FINAL_UPDATE_MS = 1_000L
+        const val FEEDBACK_WEIGHT = 2.0
         val CAR_PACKAGES = setOf("com.google.android.projection.gearhead", "com.google.android.apps.automotive.media")
     }
 }

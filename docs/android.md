@@ -146,6 +146,24 @@ is connected), what you did during the song (seeks, pauses, favoriting via `Favo
 the smart queue's score. It waits in `pending_listens.context` (JSON) until the server has it.
 The fields and the export are described in [training-data.md](training-data.md).
 
+### Feedback and the personal model
+
+**Not now** and **More like this** sit either side of Lyrics in the player and on the
+notification / lock screen (thumbs, as media button preferences). Both are custom session
+commands (`FeedbackCommands`) handled by `PlaybackService`: Not now records a strong negative in
+the session, counts as an early skip for the smart queue wherever you are in the song, and skips;
+More like this replaces what's next with songs like it (any queue, even with the smart queue
+off). Each is sent to the server (`pending_feedback` until it has it) and teaches the personal
+model with double weight.
+
+The personal model (`PersonalModelImpl`, `OnlineSkipModel`, `SkipFeatures`) predicts the chance
+of a skip from the song, the current `Situation` (output, network, charging, queue, session) and
+your history. It starts from the server's model (`skip_model.json`) and learns from every listen
+as `PlayReportTracker` logs it, offline too; examples are kept in `learned_examples` and replayed
+on top of each newer server model. `TasteRanker` adds its say to the smart queue's and
+autoplay's ranking, weighted by how much it has learned. Each listen logs the hand-tuned score
+and the model's chance, so the server can compare them.
+
 ### Smart queue
 
 Settings → Playback → **Smart queue** (on by default) adapts the rest of the queue to what you skip.

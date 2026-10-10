@@ -20,6 +20,10 @@ import app.rev.data.local.offline.OfflineTrackDao
 import app.rev.data.local.playback.PlaybackQueueDao
 import app.rev.data.local.playback.PlaybackQueueEntity
 import app.rev.data.local.offline.OfflineTrackEntity
+import app.rev.data.local.stats.LearnedExampleDao
+import app.rev.data.local.stats.LearnedExampleEntity
+import app.rev.data.local.stats.PendingFeedbackDao
+import app.rev.data.local.stats.PendingFeedbackEntity
 import app.rev.data.local.stats.PendingListenDao
 import app.rev.data.local.stats.PendingListenEntity
 
@@ -38,8 +42,10 @@ import app.rev.data.local.stats.PendingListenEntity
         OfflineCollectionTrackEntity::class,
         LyricsEntity::class,
         PendingListenEntity::class,
+        LearnedExampleEntity::class,
+        PendingFeedbackEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -53,6 +59,7 @@ import app.rev.data.local.stats.PendingListenEntity
         AutoMigration(from = 9, to = 10),
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
+        AutoMigration(from = 12, to = 13),
     ],
 )
 abstract class RevDatabase : RoomDatabase() {
@@ -62,4 +69,6 @@ abstract class RevDatabase : RoomDatabase() {
     abstract fun downloadJobDao(): DownloadJobDao
     abstract fun lyricsDao(): LyricsDao
     abstract fun pendingListenDao(): PendingListenDao
+    abstract fun learnedExampleDao(): LearnedExampleDao
+    abstract fun pendingFeedbackDao(): PendingFeedbackDao
 }

@@ -49,6 +49,16 @@ interface PlaybackReporter {
 
     /** Moved on to another track after [listenedMs], before it counted as a play. */
     suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext? = null)
+
+    /** A feedback button ([FeedbackKind]) pressed during the listen that started at [listenStartedAt]. */
+    suspend fun feedback(trackId: String, listenStartedAt: Long, kind: FeedbackKind, positionMs: Long) = Unit
+}
+
+/** The player's feedback buttons. */
+enum class FeedbackKind(val wire: String) {
+    /** Skip it: not this, not now. */
+    NotNow("not_now"),
+    MoreLikeThis("more_like_this"),
 }
 
 /** How a song got into the queue. */
@@ -105,8 +115,10 @@ data class ListenContext(
     val device: DeviceSnapshot? = null,
     /** What you did while it played, up to the moment the listen was logged. */
     val behaviour: ListenBehaviour = ListenBehaviour(),
-    /** How well the smart queue thought the song would fit when it started (its score), to check its guesses later. */
+    /** How well the smart queue's hand-tuned rules thought the song would fit when it started, to check their guesses. */
     val predictedScore: Double? = null,
+    /** The personal skip model's chance of skipping it when it started, to check its guesses. */
+    val predictedSkip: Double? = null,
 )
 
 /** The phone's situation when a song started. Names of Bluetooth devices help tell the car from earbuds. */

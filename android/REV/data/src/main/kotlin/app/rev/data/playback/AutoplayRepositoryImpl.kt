@@ -5,6 +5,7 @@ import app.rev.domain.model.Result
 import app.rev.domain.model.Track
 import app.rev.domain.playback.Autoplay
 import app.rev.domain.playback.AutoplayRepository
+import app.rev.domain.playback.QueueSource
 import app.rev.domain.taste.CandidateRequest
 import app.rev.domain.taste.Candidates
 import app.rev.domain.taste.TasteRanker
@@ -34,7 +35,7 @@ class AutoplayRepositoryImpl(
         val songs = (online as? Result.Ok)?.value?.takeIf { it.isNotEmpty() }
             ?: Autoplay.fromDownloads(plan, offline.observeDownloadedTracks().first())
         // Similar songs go in the order that fits the session best; an album plays in order.
-        return if (plan is Autoplay.Plan.NextAlbum) songs else ranker.rank(songs).take(Autoplay.RADIO_SIZE)
+        return if (plan is Autoplay.Plan.NextAlbum) songs else ranker.rank(songs, source = QueueSource.Autoplay.wire).take(Autoplay.RADIO_SIZE)
     }
 
     override suspend fun candidates(request: CandidateRequest): List<Track> {

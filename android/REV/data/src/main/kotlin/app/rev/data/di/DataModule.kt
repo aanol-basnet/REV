@@ -59,6 +59,7 @@ import app.rev.domain.repository.SearchRepository
 import app.rev.domain.repository.ServerRepository
 import app.rev.domain.model.Result
 import app.rev.domain.model.ServerUrl
+import app.rev.data.stats.PersonalModelImpl
 import app.rev.data.stats.TasteRepositoryImpl
 import app.rev.domain.playback.FavoriteEvents
 import dagger.Module
@@ -169,11 +170,13 @@ object DataModule {
         downloadJobDao: DownloadJobDao,
         home: HomeRepositoryImpl,
         taste: TasteRepositoryImpl,
+        personalModel: PersonalModelImpl,
     ): ServerRepository = ServerRepositoryImpl(api, store, terminator) {
         libraryDao.clearAll()
         downloadJobDao.clear()
         home.clear()
         taste.clear()
+        personalModel.clear()
         // Downloaded files stay: they are the user's music, and play without any server.
     }
 

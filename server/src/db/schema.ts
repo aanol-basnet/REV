@@ -148,3 +148,33 @@ export const smartPlaylistSaves = sqliteTable(
   },
   (t) => [uniqueIndex('smart_playlist_saves_user_smart_idx').on(t.userId, t.smartId)],
 );
+
+/** Feedback buttons pressed in the player, about one listen (`listenStartedAt` joins `plays.started_at`). */
+export const feedback = sqliteTable(
+  'feedback',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    trackId: text('track_id').notNull(),
+    listenStartedAt: integer('listen_started_at').notNull(),
+    /** not_now or more_like_this. */
+    kind: text('kind').notNull(),
+    at: integer('at').notNull(),
+    positionMs: integer('position_ms'),
+    recordedAt: integer('recorded_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('feedback_user_listen_kind_idx').on(t.userId, t.trackId, t.listenStartedAt, t.kind),
+  ],
+);
+
+/** Each user's latest personal skip model (JSON `SkipModel`). */
+export const skipModels = sqliteTable('skip_models', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  model: text('model').notNull(),
+  trainedAt: integer('trained_at').notNull(),
+});

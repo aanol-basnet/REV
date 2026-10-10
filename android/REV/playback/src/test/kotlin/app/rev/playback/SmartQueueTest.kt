@@ -137,4 +137,33 @@ class SmartQueueTest {
         assertEquals(album.map { it.id }, queueIds())
         assertTrue(notes.isEmpty())
     }
+
+    @Test
+    fun `more like this works anywhere, even in an album`() = runTest {
+        val repo = Fake(listOf(track("x"), track("y")))
+        val queue = smartQueue(repo)
+        val album = (1..6).map { track("t$it", artist = "Tool", album = "lateralus", n = it) }
+        player.setMediaItems(album.map { it.toMediaItem(null) })
+        player.seekTo(0, 90_000)
+        queue.moreLikeThis()
+        runCurrent()
+        assertEquals(QueueChange.MoreLikeThis, notes.last().change)
+        assertEquals("t1", queueIds().first())
+        assertEquals(setOf("x", "y"), queueIds().drop(1).toSet())
+        assertEquals(Outcome.MoreLikeThis, session.signals().last().outcome)
+    }
+
+    @Test
+    fun `not now counts as an early skip however far into the song`() = runTest {
+        val queue = smartQueue(Fake(emptyList()))
+        player.setMediaItems((1..8).map { track("s$it").toMediaItem(null) })
+        repeat(3) {
+            player.seekTo(player.currentMediaItemIndex, 120_000)
+            queue.notNow()
+            player.seekToNextMediaItem()
+            runCurrent()
+        }
+        assertEquals(QueueChange.Reshuffled, notes.last().change)
+        assertEquals(List(3) { Outcome.NotNow }, session.signals().map { it.outcome })
+    }
 }
