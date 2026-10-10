@@ -30,3 +30,6 @@ captures/
 # OS / editors
 .DS_Store
 .vscode/
+
+# Claude Code local notes
+CLAUDE.local.md
