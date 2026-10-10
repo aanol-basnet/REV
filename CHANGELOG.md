@@ -3,6 +3,15 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.3.0 — 2026-10-10
+
+### New
+
+- **Follow my skips:** skip three songs in a row early on, then stay on one for 30 seconds, and the
+  rest of your queue changes to songs like that one. The artists you skipped are left out. Works
+  offline too, using your downloads.
+- Turn it off in Settings → Playback. It leaves albums played in order and repeat alone.
+
 ## 0.2.6 — 2026-10-10
 
 ### Changed

@@ -77,6 +77,7 @@ fun SettingsRoute(onOpenSystemStatus: () -> Unit, onOpenEqualizer: () -> Unit, v
         onReplayGainChange = viewModel::setReplayGain,
         onCrossfadeChange = viewModel::setCrossfade,
         onAutoplayChange = viewModel::setAutoplay,
+        onFollowSkipsChange = viewModel::setFollowSkips,
         onSmartChange = viewModel::setSmartDownloads,
         onSaveLocalUrl = viewModel::saveLocalUrl,
         onAutomaticLocalUrl = viewModel::useAutomaticLocalAddress,
@@ -98,6 +99,7 @@ internal fun SettingsScreen(
     onReplayGainChange: (ReplayGainMode) -> Unit = {},
     onCrossfadeChange: (Int) -> Unit = {},
     onAutoplayChange: (Boolean) -> Unit = {},
+    onFollowSkipsChange: (Boolean) -> Unit = {},
     onSmartChange: (SmartDownloadSettings) -> Unit = {},
     onSaveLocalUrl: (String) -> Unit = {},
     onAutomaticLocalUrl: () -> Unit = {},
@@ -219,6 +221,18 @@ internal fun SettingsScreen(
                     )
                 }
                 Switch(checked = state.playback.autoplay, onCheckedChange = onAutoplayChange)
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.playback_follow_skips), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.playback_follow_skips_detail),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = state.playback.followSkips, onCheckedChange = onFollowSkipsChange)
             }
             Spacer(Modifier.height(8.dp))
             Row(

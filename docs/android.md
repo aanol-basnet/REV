@@ -136,6 +136,16 @@ queue works shuffled or not: the queue shows play order and `queueMove` turns a 
 move that produces it. Drop targets are measured from the laid-out rows (`dropTarget`), so rows
 that grow with large fonts land where they're dropped.
 
+**Follow my skips** (Settings → Playback, on by default; `SkipFollower`, `SkipStreak`,
+`SkipSteering`): three early skips in a row (leaving a song in its first 30 s, or first half if
+shorter; going back doesn't count, a song played through resets the streak) followed by 30 s on
+one song replace everything after it in play order with songs like it. They come from
+`POST /api/autoplay/radio` seeded with that song's artist and genre, or from downloads when the
+server can't be reached (same artist first, then the genre); the skipped songs' artists are left
+out unless that leaves fewer than 10. New songs are added before the old ones are removed so
+autoplay never sees an ended queue. It stays out of the way with repeat on and for albums played
+in order.
+
 ## Search
 
 `:feature:search` searches the **library only**: a search field (debounced 350 ms; clearing

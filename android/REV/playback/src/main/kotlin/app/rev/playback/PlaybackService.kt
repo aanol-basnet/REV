@@ -136,6 +136,7 @@ class PlaybackService : MediaLibraryService() {
 
         queuePersister = QueuePersister(player, queueStore, scope) { it.systemArtworkUri() }.also { it.start() }
         AutoplayExtender(player, scope, autoplay, enabled = { settings.autoplay }, toItem = ::queueItem).start()
+        SkipFollower(player, scope, autoplay, enabled = { settings.followSkips }, toItem = ::queueItem).start()
 
         tree = LibraryTree(
             libraryRepository,

@@ -29,7 +29,8 @@ server, and none of those services needs to be exposed to the internet.
 - **Home**: recently played, mixes built from your listening, similar artists, albums you haven't
   heard, and rediscoveries.
 - **Autoplay**: when the queue runs out, REV plays the next album, more by the same artist, or
-  similar songs.
+  similar songs. Skip a few songs in a row and stay on one, and the rest of the queue changes to
+  songs like it (online or from downloads).
 - **Offline**: download albums or playlists to the phone; smart downloads keep your favorites and
   recent listening on the device.
 - **Lyrics**: synced lyrics that follow the song, from your files or [LRCLIB](https://lrclib.net),

@@ -15,6 +15,8 @@ data class PlaybackSettings(
     val crossfadeSeconds: Int = 0,
     /** When the queue runs out, keep playing: the next album, or similar songs. */
     val autoplay: Boolean = true,
+    /** Skipping a few songs in a row and staying on one refills the queue with songs like it. */
+    val followSkips: Boolean = true,
     val equalizer: EqualizerSettings = EqualizerSettings(),
 )
 
@@ -53,6 +55,7 @@ interface PlaybackSettingsRepository {
     suspend fun setReplayGain(mode: ReplayGainMode)
     suspend fun setCrossfadeSeconds(seconds: Int)
     suspend fun setAutoplay(enabled: Boolean)
+    suspend fun setFollowSkips(enabled: Boolean)
     suspend fun setEqualizer(equalizer: EqualizerSettings)
 }
 

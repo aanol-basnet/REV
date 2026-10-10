@@ -20,6 +20,7 @@ class PlaybackSettingsStore(private val dataStore: DataStore<Preferences>) : Pla
             replayGain = ReplayGainMode.entries.firstOrNull { it.name == prefs[REPLAY_GAIN] } ?: ReplayGainMode.Album,
             crossfadeSeconds = (prefs[CROSSFADE] ?: 0).coerceIn(0, MAX_CROSSFADE_SECONDS),
             autoplay = prefs[AUTOPLAY] ?: true,
+            followSkips = prefs[FOLLOW_SKIPS] ?: true,
             equalizer = EqualizerSettings(
                 enabled = prefs[EQ_ENABLED] ?: false,
                 bandLevelsMb = prefs[EQ_BANDS].orEmpty().split(',').mapNotNull { it.toIntOrNull() },
@@ -41,6 +42,10 @@ class PlaybackSettingsStore(private val dataStore: DataStore<Preferences>) : Pla
         dataStore.edit { it[AUTOPLAY] = enabled }
     }
 
+    override suspend fun setFollowSkips(enabled: Boolean) {
+        dataStore.edit { it[FOLLOW_SKIPS] = enabled }
+    }
+
     override suspend fun setEqualizer(equalizer: EqualizerSettings) {
         dataStore.edit {
             it[EQ_ENABLED] = equalizer.enabled
@@ -57,6 +62,7 @@ class PlaybackSettingsStore(private val dataStore: DataStore<Preferences>) : Pla
         private val REPLAY_GAIN = stringPreferencesKey("replay_gain")
         private val CROSSFADE = intPreferencesKey("crossfade_seconds")
         private val AUTOPLAY = booleanPreferencesKey("autoplay")
+        private val FOLLOW_SKIPS = booleanPreferencesKey("follow_skips")
         private val EQ_ENABLED = booleanPreferencesKey("eq_enabled")
         private val EQ_BANDS = stringPreferencesKey("eq_bands_mb")
         private val EQ_PRESET = stringPreferencesKey("eq_preset")

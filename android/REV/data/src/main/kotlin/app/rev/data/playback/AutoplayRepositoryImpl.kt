@@ -5,6 +5,7 @@ import app.rev.domain.model.Result
 import app.rev.domain.model.Track
 import app.rev.domain.playback.Autoplay
 import app.rev.domain.playback.AutoplayRepository
+import app.rev.domain.playback.SkipSteering
 import app.rev.domain.repository.LibraryError
 import app.rev.domain.repository.OfflineRepository
 import kotlinx.coroutines.flow.first
@@ -25,5 +26,16 @@ class AutoplayRepositoryImpl(
         }
         if (online is Result.Ok && online.value.isNotEmpty()) return online.value
         return Autoplay.fromDownloads(plan, offline.observeDownloadedTracks().first())
+    }
+
+    override suspend fun songsLike(seed: Track, queue: List<Track>, skipped: List<Track>): List<Track> {
+        val plan = SkipSteering.plan(seed, queue)
+        val online = api.radio(plan.artistIds, plan.genres, plan.excludeTracks)
+        val songs = if (online is Result.Ok && online.value.isNotEmpty()) {
+            online.value
+        } else {
+            SkipSteering.fromDownloads(plan, seed, offline.observeDownloadedTracks().first())
+        }
+        return SkipSteering.avoidSkipped(songs, seed, skipped)
     }
 }

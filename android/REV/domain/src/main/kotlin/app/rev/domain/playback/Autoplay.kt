@@ -8,6 +8,9 @@ import kotlin.random.Random
 interface AutoplayRepository {
     /** What to append after [queue]: the next album, or songs like the queue's. Empty when nothing fits. */
     suspend fun continuation(queue: List<Track>): List<Track>
+
+    /** Songs like [seed] to replace the rest of [queue], avoiding the [skipped] songs' artists ([SkipSteering]). */
+    suspend fun songsLike(seed: Track, queue: List<Track>, skipped: List<Track>): List<Track>
 }
 
 /**

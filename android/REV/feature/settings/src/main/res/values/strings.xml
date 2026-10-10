@@ -87,6 +87,8 @@
     <string name="playback_crossfade_seconds">%1$d s</string>
     <string name="playback_crossfade_detail">Albums played in order stay gapless.</string>
     <string name="playback_autoplay">Autoplay</string>
+    <string name="playback_follow_skips">Follow my skips</string>
+    <string name="playback_follow_skips_detail">Skip a few songs in a row and stay on one, and the rest of the queue changes to songs like it. Works offline from your downloads.</string>
     <string name="playback_autoplay_detail">When the queue ends, keep playing: the next album after an album, similar songs after anything else. Works offline from your downloads.</string>
     <string name="smart_title">Smart downloads</string>
     <string name="smart_favorites">Keep favorite tracks on this device</string>
