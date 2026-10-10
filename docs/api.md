@@ -312,7 +312,8 @@ skips (early skips count fully, later ones half), pulled toward 0 with little to
 }
 ```
 
-`dayparts` are six 4-hour parts of the local day; their scores say how much more (up to 1) or
+`modes` lists each listening mode with at least 10 plays and the genres and artists played more or
+less in it than usual (`{ mode, genres, artists }`, same scores as dayparts). `dayparts` are six 4-hour parts of the local day; their scores say how much more (up to 1) or
 less (down to -1) a genre or artist is played then than usual. Parts with fewer than 20 plays are
 empty.
 

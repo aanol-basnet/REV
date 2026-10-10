@@ -31,6 +31,8 @@ internal fun queueNoteText(note: QueueNote): String = when (note.change) {
     QueueChange.OtherArtist -> stringResource(R.string.smart_queue_other_artist)
     QueueChange.NextAlbum -> stringResource(R.string.smart_queue_next_album)
     QueueChange.FreshStart -> stringResource(R.string.smart_queue_fresh_start)
+    QueueChange.ModeChanged -> stringResource(R.string.smart_queue_mode_changed)
+    QueueChange.ModeMix -> stringResource(R.string.smart_queue_mode_mix, note.title)
 }
 
 /** Shows each new smart queue change once, as it happens. */

@@ -65,3 +65,30 @@ interface PendingFeedbackDao {
     @Query("DELETE FROM pending_feedback WHERE trackId = :trackId AND listenStartedAt = :listenStartedAt AND kind = :kind")
     suspend fun delete(trackId: String, listenStartedAt: Long, kind: String)
 }
+
+/** A time you picked a listening mode (or listened without one) and the situation then, for guessing it later. */
+@Entity(tableName = "mode_choices", indices = [Index("at")])
+data class ModeChoiceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** Empty for no mode. */
+    val modeId: String,
+    val output: String?,
+    val outputName: String?,
+    val hour: Int,
+    val weekday: Int,
+    val network: String?,
+    val charging: Boolean?,
+    val at: Long,
+)
+
+@Dao
+interface ModeChoiceDao {
+    @Insert
+    suspend fun insert(choice: ModeChoiceEntity)
+
+    @Query("SELECT * FROM (SELECT * FROM mode_choices ORDER BY at DESC LIMIT :limit) ORDER BY at")
+    suspend fun recent(limit: Int): List<ModeChoiceEntity>
+
+    @Query("DELETE FROM mode_choices WHERE id NOT IN (SELECT id FROM mode_choices ORDER BY at DESC LIMIT :keep)")
+    suspend fun trim(keep: Int)
+}

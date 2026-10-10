@@ -12,6 +12,8 @@ data class TasteProfile(
     val tracks: Map<String, TrackHistory> = emptyMap(),
     /** Parts of the day, by the hour they start, with what's played more or less then. */
     val dayparts: List<Daypart> = emptyList(),
+    /** Listening modes by id, with what's played more or less in them. */
+    val modes: Map<String, ModeTaste> = emptyMap(),
 ) {
     fun artist(id: String?): Double = id?.let(artists::get) ?: 0.0
     fun genre(name: String?): Double = name?.lowercase()?.let(genres::get) ?: 0.0
@@ -48,6 +50,9 @@ data class TasteProfile(
 }
 
 data class TrackHistory(val plays: Int, val skips: Int)
+
+/** A listening mode: genres (lowercase) and artists played more (up to 1) or less (down to -1) than usual in it. */
+data class ModeTaste(val genres: Map<String, Double>, val artists: Map<String, Double>)
 
 /** A part of the day: genres (lowercase) and artists played more (up to 1) or less (down to -1) than usual. */
 data class Daypart(val fromHour: Int, val genres: Map<String, Double>, val artists: Map<String, Double>)

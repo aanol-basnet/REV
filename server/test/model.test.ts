@@ -44,6 +44,7 @@ describe('skip model training', () => {
         sessionPosition: null,
         trackPlays: 0,
         trackSkips: 0,
+        mode: null,
       };
       const skipped = tool && car ? random() < 0.9 : random() < 0.1;
       return {

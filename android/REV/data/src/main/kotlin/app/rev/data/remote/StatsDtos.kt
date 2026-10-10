@@ -3,6 +3,7 @@ package app.rev.data.remote
 import app.rev.domain.learning.SkipModel
 import app.rev.domain.playback.ListenContext
 import app.rev.domain.taste.Daypart
+import app.rev.domain.taste.ModeTaste
 import app.rev.domain.taste.TasteProfile
 import app.rev.domain.taste.TrackHistory
 import app.rev.domain.model.Discoveries
@@ -81,6 +82,9 @@ internal data class ListenContextDto(
     val favoritedDuring: Boolean?,
     val predictedScore: Double?,
     val predictedSkip: Double?,
+    val mode: String?,
+    val modeName: String?,
+    val modeSource: String?,
 )
 
 internal fun ListenContext.toDto() = ListenContextDto(
@@ -117,6 +121,9 @@ internal fun ListenContext.toDto() = ListenContextDto(
     favoritedDuring = behaviour.favoritedDuring,
     predictedScore = predictedScore?.let { kotlin.math.round(it * 1000) / 1000 },
     predictedSkip = predictedSkip?.let { kotlin.math.round(it * 1000) / 1000 },
+    mode = mode,
+    modeName = modeName,
+    modeSource = modeSource,
 )
 
 @Serializable
@@ -413,6 +420,7 @@ internal data class TasteProfileDto(
     val decades: List<TasteDecadeDto> = emptyList(),
     val tracks: List<TasteTrackDto> = emptyList(),
     val dayparts: List<TasteDaypartDto> = emptyList(),
+    val modes: List<TasteModeDto> = emptyList(),
 ) {
     fun toDomain() = TasteProfile(
         artists = artists.associate { it.id to it.score },
@@ -422,8 +430,18 @@ internal data class TasteProfileDto(
         dayparts = dayparts.map { part ->
             Daypart(part.fromHour, part.genres.associate { it.name.lowercase() to it.score }, part.artists.associate { it.id to it.score })
         },
+        modes = modes.associate { m ->
+            m.mode to ModeTaste(m.genres.associate { it.name.lowercase() to it.score }, m.artists.associate { it.id to it.score })
+        },
     )
 }
+
+@Serializable
+internal data class TasteModeDto(
+    val mode: String,
+    val genres: List<TasteGenreDto> = emptyList(),
+    val artists: List<TasteArtistDto> = emptyList(),
+)
 
 @Serializable
 internal data class TasteArtistDto(val id: String, val score: Double)

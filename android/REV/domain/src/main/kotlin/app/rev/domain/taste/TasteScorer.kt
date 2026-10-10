@@ -8,6 +8,9 @@ import app.rev.domain.learning.CurrentSituation
 import app.rev.domain.learning.ListenFeatures
 import app.rev.domain.learning.PersonalModel
 import app.rev.domain.playback.QueueSource
+import app.rev.domain.modes.CurrentMode
+import app.rev.domain.modes.ListeningMode
+import app.rev.domain.modes.ModeLean
 import java.time.LocalDate
 
 /**
@@ -22,8 +25,11 @@ class TasteScorer(
     private val skipChances: Map<String, Double> = emptyMap(),
     /** How much the model counts, growing with how much it has learned. */
     private val modelWeight: Double = 0.0,
+    /** What you're doing: leans towards what you play in this mode, and to familiar or new songs. */
+    private val mode: ListeningMode? = null,
 ) {
     private val daypart = profile.daypart(hour)
+    private val modeTaste = mode?.let { profile.modes[it.id] }
 
     /** The hand-tuned score plus, once it has learned something, the personal model's say. */
     fun score(track: Track): Double {
@@ -44,6 +50,14 @@ class TasteScorer(
         s += PROFILE_DECADE * profile.decade(track.year)
         daypart?.let { part ->
             s += DAYPART * ((genre?.let(part.genres::get) ?: 0.0) + (track.artistId?.let(part.artists::get) ?: 0.0)) / 2
+        }
+        modeTaste?.let { m ->
+            s += MODE * ((genre?.let(m.genres::get) ?: 0.0) + (track.artistId?.let(m.artists::get) ?: 0.0)) / 2
+        }
+        when (mode?.lean) {
+            ModeLean.Familiar -> s += LEAN * profile.familiarity(track.id)
+            ModeLean.Discover -> s -= LEAN * profile.familiarity(track.id)
+            else -> Unit
         }
         s += FAMILIARITY * session.familiarity * profile.familiarity(track.id)
         s -= ALWAYS_SKIPPED * profile.skipRate(track.id)
@@ -76,6 +90,8 @@ class TasteScorer(
         private const val PROFILE_GENRE = 0.4
         private const val PROFILE_DECADE = 0.15
         private const val DAYPART = 0.3
+        private const val MODE = 0.6
+        private const val LEAN = 0.5
         private const val FAMILIARITY = 0.5
         private const val ALWAYS_SKIPPED = 0.8
         private const val FAVORITE = 0.3
@@ -95,6 +111,7 @@ class TasteRanker(
     private val model: PersonalModel? = null,
     private val situation: CurrentSituation? = null,
     private val weekday: () -> Int = { LocalDate.now().dayOfWeek.value - 1 },
+    private val currentMode: CurrentMode? = null,
 ) {
     /** A scorer for [tracks] coming from [source] (smart or autoplay). */
     suspend fun scorer(tracks: List<Track> = emptyList(), source: String = QueueSource.Smart.wire): TasteScorer {
@@ -105,7 +122,9 @@ class TasteRanker(
         } else {
             tracks.mapNotNull { t -> model.skipChance(input(t, profile, source))?.let { t.id to it } }.toMap()
         }
-        return TasteScorer(session.taste(profile), profile, hour(), chances, TasteScorer.MODEL_WEIGHT * confidence)
+        return TasteScorer(
+            session.taste(profile), profile, hour(), chances, TasteScorer.MODEL_WEIGHT * confidence, currentMode?.value?.mode,
+        )
     }
 
     suspend fun rank(tracks: List<Track>, spread: Boolean = true, source: String = QueueSource.Smart.wire): List<Track> =
@@ -120,5 +139,5 @@ class TasteRanker(
     private suspend fun profile(): TasteProfile = runCatching { taste.profile() }.getOrDefault(TasteProfile())
 
     private fun input(track: Track, profile: TasteProfile, source: String) =
-        ListenFeatures.candidate(track, situation?.value, source, hour(), weekday(), profile)
+        ListenFeatures.candidate(track, situation?.value, source, hour(), weekday(), profile, mode = currentMode?.value?.mode?.id)
 }

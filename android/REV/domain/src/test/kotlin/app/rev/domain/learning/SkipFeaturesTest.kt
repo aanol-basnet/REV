@@ -55,6 +55,7 @@ class SkipFeaturesTest {
             sessionPosition = int("sessionPosition"),
             trackPlays = int("trackPlays")!!,
             trackSkips = int("trackSkips")!!,
+            mode = str("mode"),
         )
     }
 }

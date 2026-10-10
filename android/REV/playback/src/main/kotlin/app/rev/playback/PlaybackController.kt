@@ -156,6 +156,9 @@ class PlaybackController @Inject constructor(
     /** "More like this": songs like it next, and the personal model learns you wanted it. */
     fun moreLikeThis() = command { sendCustomCommand(FeedbackCommands.MORE_LIKE_THIS, Bundle.EMPTY) }
 
+    /** Plays a fresh mix for the current listening mode. */
+    override fun playModeMix() = command { sendCustomCommand(FeedbackCommands.PLAY_MODE_MIX, Bundle.EMPTY) }
+
     fun toggleShuffle() = command { shuffleModeEnabled = !shuffleModeEnabled }
 
     fun cycleRepeat() = command {

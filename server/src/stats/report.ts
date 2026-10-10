@@ -34,6 +34,8 @@ export interface PlayRow {
   year: number | null;
   genres: string[];
   durationMs: number;
+  /** The listening mode the app recorded, if any. */
+  mode?: string | null;
 }
 
 export interface Bounds {

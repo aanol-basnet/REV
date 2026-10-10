@@ -3,6 +3,21 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.7.0 — 2026-10-10
+
+### New
+
+- **Listening modes:** tell REV what you're up to: Driving solo, Driving with family, At work, At
+  home, Jam inspiration, or your own (like Gym). Tap the chip at the top of Home or the player.
+- REV learns your taste in each mode separately: what you play and skip while driving with family
+  isn't what you want at work. Family drives and work lean to songs you know; Jam inspiration
+  leans to songs you haven't heard much.
+- **REV recognises your modes by itself.** It learns where and when you pick each one (your car's
+  Bluetooth, the time of day, Wi-Fi or mobile data, weekdays or weekends) and switches on its own
+  next time. A mode you picked ends when you move somewhere else (like getting out of the car) or
+  take a break.
+- Switching mode reorders what's coming up, and "Play for this mode" starts a fitting mix.
+
 ## 0.6.0 — 2026-10-10
 
 ### New

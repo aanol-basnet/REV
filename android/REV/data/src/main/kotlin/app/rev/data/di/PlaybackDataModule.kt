@@ -21,6 +21,13 @@ import app.rev.domain.playback.PlaybackReporter
 import app.rev.domain.playback.QueueStore
 import app.rev.domain.playback.TrackSourceResolver
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import app.rev.data.ModeStore
+import app.rev.data.stats.ModeChoiceStoreImpl
+import app.rev.domain.modes.CurrentMode
+import app.rev.domain.modes.ModeChoiceStore
+import app.rev.domain.modes.ModeRepository
 import app.rev.data.local.RevDatabase
 import app.rev.data.stats.PersonalModelImpl
 import app.rev.domain.learning.CurrentSituation
@@ -92,7 +99,8 @@ object PlaybackDataModule {
         taste: TasteRepository,
         model: PersonalModel,
         situation: CurrentSituation,
-    ): TasteRanker = TasteRanker(session, taste, hour = { LocalTime.now().hour }, model = model, situation = situation)
+        mode: CurrentMode,
+    ): TasteRanker = TasteRanker(session, taste, hour = { LocalTime.now().hour }, model = model, situation = situation, currentMode = mode)
 
     @Provides
     @Singleton
@@ -105,6 +113,18 @@ object PlaybackDataModule {
 
     @Provides
     fun providePersonalModel(impl: PersonalModelImpl): PersonalModel = impl
+
+    @Provides
+    @Singleton
+    fun provideModeRepository(dataStore: DataStore<Preferences>): ModeRepository = ModeStore(dataStore)
+
+    @Provides
+    @Singleton
+    fun provideModeChoices(db: RevDatabase): ModeChoiceStore = ModeChoiceStoreImpl(db.modeChoiceDao())
+
+    @Provides
+    @Singleton
+    fun provideCurrentMode(): CurrentMode = CurrentMode()
 
     @Provides
     @Singleton

@@ -54,6 +54,7 @@ class PlayReportTrackerTest {
         clock = { testScheduler.currentTime },
         device = { DeviceSnapshot(AudioOutput.Bluetooth, outputName = "Car Kit", network = "cellular", volume = 0.5) },
         predict = { 0.42 },
+        modeAtStart = { _, _ -> app.rev.domain.modes.ActiveMode(app.rev.domain.modes.BuiltInModes.Work, app.rev.domain.modes.ModeSource.Auto, 0) },
         favoriteChanges = favorites,
         utcOffsetMinutes = { 120 },
     ).also { it.start() }
@@ -96,6 +97,7 @@ class PlayReportTrackerTest {
         assertEquals("Car Kit", a.device?.outputName)
         assertEquals(120, a.utcOffsetMinutes)
         assertEquals(0.42, a.predictedScore)
+        assertEquals(Triple("work", "At work", "auto"), Triple(a.mode, a.modeName, a.modeSource))
 
         // b: listened long enough to count; it knows the song before was skipped.
         listen(tracker, 101_000)

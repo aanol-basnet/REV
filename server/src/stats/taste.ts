@@ -14,6 +14,9 @@ const DAYPART_HOURS = 4;
 const MIN_DAYPART_PLAYS = 20;
 const MIN_DAYPART_ITEM_PLAYS = 3;
 const MAX_DAYPART_ITEMS = 15;
+/** Plays a listening mode needs before it says anything, and a genre or artist within it. */
+const MIN_MODE_PLAYS = 10;
+const MIN_MODE_ITEM_PLAYS = 2;
 
 interface Tally {
   plays: number;
@@ -22,8 +25,8 @@ interface Tally {
 
 /**
  * Turns the listening log into a taste profile: per artist, genre and decade a score from
- * recency-weighted plays and skips, per song its counts, and per part of the day the genres and
- * artists played more or less than usual then.
+ * recency-weighted plays and skips, per song its counts, and per part of the day (and per
+ * listening mode) the genres and artists played more or less than usual then.
  */
 export function buildTaste(rows: PlayRow[], zone: Zone, now: number): TasteProfile {
   const artists = new Map<string, Tally>();
@@ -40,6 +43,7 @@ export function buildTaste(rows: PlayRow[], zone: Zone, now: number): TasteProfi
     genres: new Map<string, number>(),
     artists: new Map<string, number>(),
   };
+  const modes = new Map<string, typeof overall>();
 
   for (const row of rows) {
     const ageDays = Math.max(0, now - row.startedAt) / DAY_MS;
@@ -63,6 +67,16 @@ export function buildTaste(rows: PlayRow[], zone: Zone, now: number): TasteProfi
     else track.skips += 1;
     track.last = Math.max(track.last, row.startedAt);
 
+    if (played && row.mode) {
+      const mode = entry(modes, row.mode, () => ({
+        plays: 0,
+        genres: new Map(),
+        artists: new Map(),
+      }));
+      mode.plays += 1;
+      for (const genre of row.genres) bump(mode.genres, genre.toLowerCase());
+      if (row.artistId) bump(mode.artists, row.artistId);
+    }
     if (played) {
       const part = parts[Math.floor(zone.hour(row.startedAt) / DAYPART_HOURS)];
       for (const target of part ? [part, overall] : [overall]) {
@@ -116,6 +130,27 @@ export function buildTaste(rows: PlayRow[], zone: Zone, now: number): TasteProfi
         artists: lifts(part.artists, overall.artists).map(({ key, score }) => ({ id: key, score })),
       };
     }),
+    modes: [...modes]
+      .filter(([, m]) => m.plays >= MIN_MODE_PLAYS)
+      .map(([mode, m]) => {
+        const lifts = (counts: Map<string, number>, all: Map<string, number>) =>
+          [...counts]
+            .filter(([, n]) => n >= MIN_MODE_ITEM_PLAYS)
+            .map(([key, n]) => ({
+              key,
+              score: lift(n / m.plays, (all.get(key) ?? n) / overall.plays),
+            }))
+            .sort(byStrength)
+            .slice(0, MAX_DAYPART_ITEMS);
+        return {
+          mode,
+          genres: lifts(m.genres, overall.genres).map(({ key, score }) => ({
+            name: genres.get(key)?.name ?? key,
+            score,
+          })),
+          artists: lifts(m.artists, overall.artists).map(({ key, score }) => ({ id: key, score })),
+        };
+      }),
   };
 }
 

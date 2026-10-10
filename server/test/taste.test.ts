@@ -74,4 +74,24 @@ describe('taste profile', () => {
     // Too few plays in the small hours to say anything.
     expect(taste.dayparts.find((p) => p.fromHour === 0)?.genres).toEqual([]);
   });
+
+  it('learns what is played more in each listening mode', () => {
+    const rows: PlayRow[] = [];
+    for (let d = 1; d <= 12; d++) {
+      rows.push({
+        ...row(`c${d}`, 'Kids Band', NOW - d * DAY, 'play', ['Pop']),
+        mode: 'driving_family',
+      });
+      rows.push({
+        ...row(`w${d}`, 'Ambient One', NOW - d * DAY + HOUR, 'play', ['Ambient']),
+        mode: 'work',
+      });
+      rows.push(row(`x${d}`, 'Metal Band', NOW - d * DAY + 2 * HOUR, 'play', ['Metal']));
+    }
+    const taste = buildTaste(rows, utc, NOW);
+    const family = taste.modes.find((m) => m.mode === 'driving_family');
+    expect(family?.genres.find((g) => g.name === 'Pop')?.score).toBe(1);
+    expect(family?.artists.map((a) => a.id)).toEqual(['ar-Kids Band']);
+    expect(taste.modes.map((m) => m.mode).sort()).toEqual(['driving_family', 'work']);
+  });
 });

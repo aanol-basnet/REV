@@ -6,6 +6,14 @@ import android.os.Bundle
 import app.rev.domain.playback.FavoriteEvents
 import app.rev.domain.playback.QueueSource
 import app.rev.domain.taste.ListeningSession
+import app.rev.domain.modes.ActiveMode
+import app.rev.domain.modes.CurrentMode
+import app.rev.domain.modes.ModeChoiceStore
+import app.rev.domain.modes.ModeKeeper
+import app.rev.domain.modes.ModeRepository
+import app.rev.domain.modes.ModeSituation
+import app.rev.domain.playback.DeviceSnapshot
+import kotlinx.coroutines.flow.first
 import app.rev.domain.learning.CurrentSituation
 import app.rev.domain.learning.ListenFeatures
 import app.rev.domain.learning.PersonalModel
@@ -97,6 +105,11 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var favoriteEvents: FavoriteEvents
     @Inject lateinit var personalModel: PersonalModel
     @Inject lateinit var situation: CurrentSituation
+    @Inject lateinit var modeRepository: ModeRepository
+    @Inject lateinit var modeChoices: ModeChoiceStore
+    @Inject lateinit var currentMode: CurrentMode
+    private val modeKeeper = ModeKeeper()
+    private lateinit var deviceState: DeviceState
     private lateinit var smartQueue: SmartQueue
 
     /** Android Auto is connected: listening in the car. */
@@ -164,7 +177,8 @@ class PlaybackService : MediaLibraryService() {
         queuePersister = QueuePersister(player, queueStore, scope) { it.systemArtworkUri() }.also { it.start() }
         AutoplayExtender(player, scope, autoplay, enabled = { settings.autoplay }, toItem = { queueItem(it, QueueSource.Autoplay) }).start()
         smartQueue = SmartQueue(
-            player, scope, autoplay, listeningSession, taste, ranker, QueueDirector(hour = { LocalTime.now().hour }),
+            player, scope, autoplay, listeningSession, taste, ranker,
+            QueueDirector(hour = { LocalTime.now().hour }, mode = { currentMode.value?.mode?.id }),
             enabled = { settings.smartQueue },
             toItem = { track, change -> queueItem(track, QueueSource.Smart, change.name) },
             onChange = ::publishQueueNote,
@@ -191,7 +205,8 @@ class PlaybackService : MediaLibraryService() {
         // notification, lock screen and app follow whichever is active.
         val sessionPlayer = castCapable(player)
         // Listens are counted on whichever player is active, so casting counts too.
-        val deviceState = DeviceState(this, sessionPlayer) { carConnected }
+        deviceState = DeviceState(this, sessionPlayer) { carConnected }
+        watchModes()
         playReports = PlayReportTracker(
             sessionPlayer,
             reporter,
@@ -199,6 +214,7 @@ class PlaybackService : MediaLibraryService() {
             device = deviceState::snapshot,
             predict = { track -> ranker.scorer().handScore(track) },
             predictSkip = { track, context -> personalModel.skipChance(ListenFeatures.of(track, context, System.currentTimeMillis(), taste.profile())) },
+            modeAtStart = ::modeAtSongStart,
             onStart = { situation.value = Situation.of(it) },
             onListen = { track, context, startedAt, skipped -> learn(track, context, startedAt, skipped, weight = 1.0) },
             favoriteChanges = favoriteEvents.changes,
@@ -267,6 +283,51 @@ class PlaybackService : MediaLibraryService() {
             val art = runCatching { widgetArtwork.forCover(state.coverArtId) }.getOrNull()
             runCatching { NowPlayingWidget.publish(applicationContext, state.copy(artworkPath = art?.path, accent = art?.accent)) }
         }
+    }
+
+    /** Listening modes: your picks (remembered with the situation), REV's guesses, and what a switch changes. */
+    private fun watchModes() {
+        scope.launch { modeRepository.modes.collect { modeKeeper.modes = it } }
+        scope.launch {
+            val saved = modeRepository.active.first()
+            modeKeeper.restore(saved)
+            applyMode(saved, reorder = false)
+            modeKeeper.load(runCatching { modeChoices.recent(ModeKeeper.MAX_CHOICES) }.getOrDefault(emptyList()))
+            modeRepository.active.collect { active ->
+                if (modeKeeper.isCurrent(active)) return@collect
+                modeKeeper.onUserChange(active, modeSituation(deviceState.snapshot()), System.currentTimeMillis())
+                    ?.let { runCatching { modeChoices.add(it) } }
+                applyMode(active, reorder = true)
+            }
+        }
+    }
+
+    /** As each song starts: keeps your mode, ends it if you've moved somewhere else, or guesses one. */
+    private fun modeAtSongStart(device: DeviceSnapshot?, newSession: Boolean): ActiveMode? {
+        val before = modeKeeper.active
+        val decision = modeKeeper.onSongStart(modeSituation(device), newSession, System.currentTimeMillis())
+        decision.remember?.let { scope.launch { runCatching { modeChoices.add(it) } } }
+        if (!sameMode(before, decision.active)) {
+            scope.launch { modeRepository.setAuto(decision.active?.mode) }
+            applyMode(decision.active, reorder = !newSession)
+        }
+        return decision.active
+    }
+
+    private fun applyMode(active: ActiveMode?, reorder: Boolean) {
+        val changed = currentMode.value?.mode?.id != active?.mode?.id
+        currentMode.value = active
+        if (!changed) return
+        // Another activity, another mood: start the session's mood over.
+        listeningSession.reset()
+        if (reorder && ::smartQueue.isInitialized) smartQueue.modeChanged()
+    }
+
+    private fun sameMode(a: ActiveMode?, b: ActiveMode?) = a?.mode?.id == b?.mode?.id && a?.source == b?.source
+
+    private fun modeSituation(device: DeviceSnapshot?): ModeSituation {
+        val now = java.time.LocalDateTime.now()
+        return ModeSituation(device?.output?.wire, device?.outputName, now.hour, now.dayOfWeek.value - 1, device?.network, device?.charging)
     }
 
     /** The personal model learns from a listen (or a feedback button, which counts double), offline too. */
@@ -410,6 +471,7 @@ class PlaybackService : MediaLibraryService() {
             val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                 .add(FeedbackCommands.NOT_NOW)
                 .add(FeedbackCommands.MORE_LIKE_THIS)
+                .add(FeedbackCommands.PLAY_MODE_MIX)
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session).setAvailableSessionCommands(commands).build()
         }
@@ -423,6 +485,7 @@ class PlaybackService : MediaLibraryService() {
             when (customCommand.customAction) {
                 FeedbackCommands.NOT_NOW.customAction -> notNow()
                 FeedbackCommands.MORE_LIKE_THIS.customAction -> moreLikeThis()
+                FeedbackCommands.PLAY_MODE_MIX.customAction -> smartQueue.playModeMix(currentMode.value?.mode?.name.orEmpty())
                 else -> return super.onCustomCommand(session, controller, customCommand, args)
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))

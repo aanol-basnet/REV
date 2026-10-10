@@ -3,6 +3,7 @@ package app.rev.playback
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import app.rev.domain.model.Track
+import app.rev.domain.modes.ActiveMode
 import app.rev.domain.playback.AudioOutput
 import app.rev.domain.playback.DeviceSnapshot
 import app.rev.domain.playback.EndReason
@@ -38,6 +39,8 @@ internal class PlayReportTracker(
     private val predict: suspend (Track) -> Double? = { null },
     /** The personal skip model's chance of skipping the song as it starts. */
     private val predictSkip: suspend (Track, ListenContext) -> Double? = { _, _ -> null },
+    /** The listening mode as a song starts ([newSession]: the first song after a break). */
+    private val modeAtStart: (DeviceSnapshot?, Boolean) -> ActiveMode? = { _, _ -> null },
     /** Each song as it starts: the situation for ranking what comes next. */
     private val onStart: (ListenContext) -> Unit = {},
     /** Each play or skip once logged, to learn from (not when a feedback button already said more). */
@@ -156,6 +159,7 @@ internal class PlayReportTracker(
         val shuffle = player.shuffleModeEnabled
         val queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toTrack() }
         val snapshot = runCatching { device() }.getOrNull()
+        val mode = runCatching { modeAtStart(snapshot, sessionPosition == 0) }.getOrNull()
         val started = ListenContext(
             source = source,
             smartChange = change,
@@ -176,6 +180,9 @@ internal class PlayReportTracker(
             utcOffsetMinutes = utcOffsetMinutes(now),
             favorite = track.starred,
             device = snapshot,
+            mode = mode?.mode?.id,
+            modeName = mode?.mode?.name,
+            modeSource = mode?.source?.wire,
         )
         context = started
         onStart(started)

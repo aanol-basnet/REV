@@ -25,6 +25,8 @@ export interface FeatureInput {
   sessionPosition: number | null;
   trackPlays: number;
   trackSkips: number;
+  /** The listening mode (work, driving_solo, ...); null when none was set. */
+  mode: string | null;
 }
 
 const MAX_GENRES = 3;
@@ -60,10 +62,17 @@ export function features(input: FeatureInput): string[] {
   if (input.sessionSkips !== null) out.push(`ss:${countBucket(input.sessionSkips)}`);
   if (input.sessionPosition !== null) out.push(`sp:${positionBucket(input.sessionPosition)}`);
   out.push(`tp:${countBucket(input.trackPlays)}`, `tk:${countBucket(input.trackSkips)}`);
+  if (input.mode) out.push(`m:${input.mode}`);
   // Taste depends on the situation: an artist in the car, a genre late at night.
   if (input.artistId) {
     if (input.output) out.push(`a:${input.artistId}|o:${input.output}`);
     out.push(`a:${input.artistId}|p:${daypart}`);
+  }
+  // And on what you're doing: an artist at work, a genre with family in the car.
+  if (input.mode) {
+    if (input.artistId) out.push(`a:${input.artistId}|m:${input.mode}`);
+    for (const g of genres) out.push(`g:${g}|m:${input.mode}`);
+    if (input.previousOutcome) out.push(`m:${input.mode}|po:${input.previousOutcome}`);
   }
   for (const g of genres) {
     out.push(`g:${g}|p:${daypart}`);

@@ -14,6 +14,9 @@ interface PlaybackQueue {
 
     /** Appends [tracks] to the end of the queue. */
     fun addToQueue(tracks: List<Track>)
+
+    /** Replaces the queue with a mix for the current listening mode. */
+    fun playModeMix() = Unit
 }
 
 /** Where a track's audio comes from when it is about to play. */
@@ -119,6 +122,10 @@ data class ListenContext(
     val predictedScore: Double? = null,
     /** The personal skip model's chance of skipping it when it started, to check its guesses. */
     val predictedSkip: Double? = null,
+    /** The listening mode when it started: its id, name, and whether you picked it or REV did. */
+    val mode: String? = null,
+    val modeName: String? = null,
+    val modeSource: String? = null,
 )
 
 /** The phone's situation when a song started. Names of Bluetooth devices help tell the car from earbuds. */

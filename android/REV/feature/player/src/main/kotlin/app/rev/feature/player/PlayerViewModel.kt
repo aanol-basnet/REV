@@ -21,12 +21,16 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import app.rev.core.ui.components.ModeControls
+import app.rev.domain.modes.ModeRepository
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val playback: PlaybackController,
     private val library: LibraryRepository,
+    modes: ModeRepository,
 ) : ViewModel() {
+    val mode = ModeControls(viewModelScope, modes, playback)
 
     val state: StateFlow<PlayerState> = playback.state
     val progress: StateFlow<PlaybackProgress> = playback.progress

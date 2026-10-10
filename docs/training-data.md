@@ -56,24 +56,25 @@ One row per listen, oldest first. Booleans are `1`/`0` in CSV; empty means unkno
 
 ### Recorded by the app (`has_context` = 1)
 
-| Column                                 | Meaning                                                                                                                     |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `source`                               | How it got into the queue: `picked`, `queued` (Play next / Add to queue), `autoplay`, `smart`, `restored`, `car`, `unknown` |
-| `smart_change`                         | For `smart`: what the smart queue did (`MoreLikeThis`, `OtherArtist`, ...)                                                  |
-| `queue_shape`, `shuffle`, `repeat`     | `album`, `artist` or `mixed`; shuffle on; `off`/`one`/`all`                                                                 |
-| `queue_position`, `queue_length`       | Place in the play order and the queue's size                                                                                |
-| `previous_outcome`, `session_skips`    | How the song before ended (`play`, `skip`, `none`); skips so far this session                                               |
-| `end_reason`                           | For skips: `next`, `previous`, `jump` (picked another song in the queue), `new_queue`, `stopped`                            |
-| `output`, `output_name`                | `speaker`, `headphones`, `bluetooth`, `car` (Android Auto), `cast`; the device's name (car kit, earbuds)                    |
-| `network`, `charging`, `screen_on`     | `wifi`/`cellular`/`none`; plugged in; screen on when it started                                                             |
-| `volume`, `volume_end`                 | Media volume (0–1) when it started and when the listen was logged                                                           |
-| `start_position_ms`, `end_position_ms` | Where it started (not 0 when resumed) and where you were when it was logged (left, for a skip)                              |
-| `seeks_forward`, `seeked_forward_ms`   | Skipping ahead within the song (impatience, skipping an intro)                                                              |
-| `seeks_back`, `seeked_back_ms`         | Going back within the song (replaying a part you love)                                                                      |
-| `pauses`, `paused_ms`                  | Pauses you made                                                                                                             |
-| `predicted_score`                      | The smart queue's score for the song when it started: compare its guess with what you did                                   |
-| `predicted_skip`                       | The phone's personal model's chance of skipping it when it started                                                          |
-| `feedback`                             | A feedback button pressed during it: `not_now` or `more_like_this`                                                          |
+| Column                                 | Meaning                                                                                                                                                                      |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`                               | How it got into the queue: `picked`, `queued` (Play next / Add to queue), `autoplay`, `smart`, `restored`, `car`, `unknown`                                                  |
+| `mode`, `mode_name`, `mode_source`     | The listening mode (`driving_solo`, `driving_family`, `work`, `home`, `jam`, or `custom:...` for your own), its name, and whether you `picked` it or REV guessed it (`auto`) |
+| `smart_change`                         | For `smart`: what the smart queue did (`MoreLikeThis`, `OtherArtist`, ...)                                                                                                   |
+| `queue_shape`, `shuffle`, `repeat`     | `album`, `artist` or `mixed`; shuffle on; `off`/`one`/`all`                                                                                                                  |
+| `queue_position`, `queue_length`       | Place in the play order and the queue's size                                                                                                                                 |
+| `previous_outcome`, `session_skips`    | How the song before ended (`play`, `skip`, `none`); skips so far this session                                                                                                |
+| `end_reason`                           | For skips: `next`, `previous`, `jump` (picked another song in the queue), `new_queue`, `stopped`                                                                             |
+| `output`, `output_name`                | `speaker`, `headphones`, `bluetooth`, `car` (Android Auto), `cast`; the device's name (car kit, earbuds)                                                                     |
+| `network`, `charging`, `screen_on`     | `wifi`/`cellular`/`none`; plugged in; screen on when it started                                                                                                              |
+| `volume`, `volume_end`                 | Media volume (0–1) when it started and when the listen was logged                                                                                                            |
+| `start_position_ms`, `end_position_ms` | Where it started (not 0 when resumed) and where you were when it was logged (left, for a skip)                                                                               |
+| `seeks_forward`, `seeked_forward_ms`   | Skipping ahead within the song (impatience, skipping an intro)                                                                                                               |
+| `seeks_back`, `seeked_back_ms`         | Going back within the song (replaying a part you love)                                                                                                                       |
+| `pauses`, `paused_ms`                  | Pauses you made                                                                                                                                                              |
+| `predicted_score`                      | The smart queue's score for the song when it started: compare its guess with what you did                                                                                    |
+| `predicted_skip`                       | The phone's personal model's chance of skipping it when it started                                                                                                           |
+| `feedback`                             | A feedback button pressed during it: `not_now` or `more_like_this`                                                                                                           |
 
 Plays are logged once they count (half the song or 4 minutes), so for plays the behaviour
 columns cover the song up to that point.
@@ -85,6 +86,8 @@ over named features of the song, the situation and your history, plus combinatio
 artist in the car or a genre late at night (`server/src/model/features.ts`, the same in the app's
 `SkipFeatures.kt`; `shared/model/feature-fixtures.json` keeps them identical).
 
+- **Modes:** the listening mode is a feature (`m:work`) and is combined with the artist, the
+  genres and how the song before ended, so the model learns your taste per activity.
 - **Labels:** a skip is 1, a play 0; "Not now" is 1 and "More like this" 0, counting double.
 - **Training** (server): AdaGrad with a little L2. It first trains on all but the newest 20% of
   listens and tests on those, then trains on everything. The server retrains a minute after it

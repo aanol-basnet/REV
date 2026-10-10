@@ -136,6 +136,7 @@ export function featureInput(r: DatasetRecord): FeatureInput {
     sessionPosition: num(r.session_position),
     trackPlays: num(r.track_plays_before) ?? 0,
     trackSkips: num(r.track_skips_before) ?? 0,
+    mode: str(r.mode),
   };
 }
 

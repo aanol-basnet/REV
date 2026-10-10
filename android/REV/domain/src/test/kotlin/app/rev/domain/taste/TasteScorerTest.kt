@@ -68,4 +68,17 @@ class TasteScorerTest {
         // The hand-tuned score, logged to compare against, leaves the model out.
         assertEquals(trusted.handScore(songs[0]), trusted.handScore(songs[1]), 1e-9)
     }
+
+    @Test
+    fun `a listening mode leans to what you play in it, and to familiar or new songs`() {
+        val profile = TasteProfile(
+            tracks = mapOf("old" to TrackHistory(plays = 30, skips = 0)),
+            modes = mapOf("driving_family" to ModeTaste(genres = mapOf("pop" to 1.0), artists = emptyMap())),
+        )
+        val family = TasteScorer(SessionTaste(), profile, 12, mode = app.rev.domain.modes.BuiltInModes.DrivingFamily)
+        assertTrue(family.score(song("p", genre = "Pop")) > family.score(song("m", genre = "Metal")))
+        assertTrue(family.score(song("old", genre = "Metal")) > family.score(song("new", genre = "Metal")))
+        val jam = TasteScorer(SessionTaste(), profile, 12, mode = app.rev.domain.modes.BuiltInModes.Jam)
+        assertTrue(jam.score(song("old", genre = "Metal")) < jam.score(song("new", genre = "Metal")))
+    }
 }

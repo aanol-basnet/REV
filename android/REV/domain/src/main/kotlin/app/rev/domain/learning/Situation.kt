@@ -16,6 +16,7 @@ data class Situation(
     val previousOutcome: String?,
     val sessionSkips: Int?,
     val sessionPosition: Int?,
+    val mode: String? = null,
 ) {
     companion object {
         fun of(context: ListenContext) = Situation(
@@ -27,6 +28,7 @@ data class Situation(
             previousOutcome = context.previousOutcome,
             sessionSkips = context.sessionSkips,
             sessionPosition = context.sessionPosition,
+            mode = context.mode,
         )
     }
 }
@@ -62,11 +64,20 @@ object ListenFeatures {
             sessionPosition = context.sessionPosition,
             trackPlays = history?.plays ?: 0,
             trackSkips = history?.skips ?: 0,
+            mode = context.mode,
         )
     }
 
     /** A song that might play next, from [source] (smart, autoplay), in the current [situation]. */
-    fun candidate(track: Track, situation: Situation?, source: String, hour: Int, weekday: Int, profile: TasteProfile): FeatureInput {
+    fun candidate(
+        track: Track,
+        situation: Situation?,
+        source: String,
+        hour: Int,
+        weekday: Int,
+        profile: TasteProfile,
+        mode: String? = situation?.mode,
+    ): FeatureInput {
         val history = profile.tracks[track.id]
         return FeatureInput(
             trackId = track.id,
@@ -88,6 +99,7 @@ object ListenFeatures {
             sessionPosition = situation?.sessionPosition?.plus(1),
             trackPlays = history?.plays ?: 0,
             trackSkips = history?.skips ?: 0,
+            mode = mode,
         )
     }
 }

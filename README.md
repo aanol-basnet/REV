@@ -33,6 +33,9 @@ server, and none of those services needs to be exposed to the internet.
 - **Smart queue**: learns from your skips and your listening history (artists, genres, eras, time
   of day) and adapts what's coming up: reshuffles by mood, switches album or artist when you skip
   through one, or follows the song you stop on. Works offline from your downloads.
+- **Listening modes**: driving solo or with family, at work, at home, looking for inspiration, or
+  your own. REV learns your taste in each, recognises them from where and when you listen, and
+  switches by itself.
 - **A personal AI**: a skip-prediction model trained only on your listening, by your server and
   further on the phone with every song, offline too. "Not now" and "More like this" buttons teach
   it directly. The smart queue and autoplay use it to choose what plays next.

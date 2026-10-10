@@ -21,7 +21,8 @@
         "sessionSkips": 3,
         "sessionPosition": 7,
         "trackPlays": 12,
-        "trackSkips": 1
+        "trackSkips": 1,
+        "mode": "driving_family"
       },
       "features": [
         "t:tr-1",
@@ -47,8 +48,14 @@
         "sp:6-10",
         "tp:8+",
         "tk:1",
+        "m:driving_family",
         "a:ar-tool|o:bluetooth",
         "a:ar-tool|p:5",
+        "a:ar-tool|m:driving_family",
+        "g:progressive metal|m:driving_family",
+        "g:rock|m:driving_family",
+        "g:metal|m:driving_family",
+        "m:driving_family|po:skip",
         "g:progressive metal|p:5",
         "g:progressive metal|o:bluetooth",
         "g:progressive metal|po:skip",
@@ -80,7 +87,8 @@
         "sessionSkips": null,
         "sessionPosition": null,
         "trackPlays": 0,
-        "trackSkips": 0
+        "trackSkips": 0,
+        "mode": null
       },
       "features": ["t:tr-2", "h:3", "p:0", "w:0", "we:0", "tp:0", "tk:0"]
     },
@@ -104,7 +112,8 @@
         "sessionSkips": 1,
         "sessionPosition": 2,
         "trackPlays": 2,
-        "trackSkips": 5
+        "trackSkips": 5,
+        "mode": "custom:gym-1"
       },
       "features": [
         "t:tr-3",
@@ -121,8 +130,12 @@
         "sp:1-2",
         "tp:2-3",
         "tk:4-7",
+        "m:custom:gym-1",
         "a:ar-x|o:speaker",
         "a:ar-x|p:2",
+        "a:ar-x|m:custom:gym-1",
+        "g:jazz|m:custom:gym-1",
+        "m:custom:gym-1|po:play",
         "g:jazz|p:2",
         "g:jazz|o:speaker",
         "g:jazz|po:play"

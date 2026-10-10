@@ -55,6 +55,7 @@ import app.rev.core.ui.components.ErrorSnackbarEffect
 import app.rev.core.ui.components.FavoriteButton
 import androidx.media3.cast.MediaRouteButton
 import androidx.media3.cast.rememberMediaRouteButtonState
+import app.rev.core.ui.components.ModePicker
 import app.rev.core.ui.icons.RevIcons
 import app.rev.core.ui.theme.artworkGradient
 import app.rev.core.ui.theme.rememberArtworkAccent
@@ -93,6 +94,7 @@ internal fun PlayerScreen(navigator: PlayerNavigator, viewModel: PlayerViewModel
         val landscape = maxWidth > maxHeight && maxWidth >= 600.dp
         Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
             TopBar(navigator)
+            ModePicker(viewModel.mode, Modifier.align(Alignment.CenterHorizontally))
             if (track == null) {
                 CenteredMessage(stringResource(R.string.player_nothing))
                 return@Column

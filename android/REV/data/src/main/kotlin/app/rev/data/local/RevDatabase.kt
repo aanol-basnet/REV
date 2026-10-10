@@ -22,6 +22,8 @@ import app.rev.data.local.playback.PlaybackQueueEntity
 import app.rev.data.local.offline.OfflineTrackEntity
 import app.rev.data.local.stats.LearnedExampleDao
 import app.rev.data.local.stats.LearnedExampleEntity
+import app.rev.data.local.stats.ModeChoiceDao
+import app.rev.data.local.stats.ModeChoiceEntity
 import app.rev.data.local.stats.PendingFeedbackDao
 import app.rev.data.local.stats.PendingFeedbackEntity
 import app.rev.data.local.stats.PendingListenDao
@@ -44,8 +46,9 @@ import app.rev.data.local.stats.PendingListenEntity
         PendingListenEntity::class,
         LearnedExampleEntity::class,
         PendingFeedbackEntity::class,
+        ModeChoiceEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -60,6 +63,7 @@ import app.rev.data.local.stats.PendingListenEntity
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
         AutoMigration(from = 12, to = 13),
+        AutoMigration(from = 13, to = 14),
     ],
 )
 abstract class RevDatabase : RoomDatabase() {
@@ -71,4 +75,5 @@ abstract class RevDatabase : RoomDatabase() {
     abstract fun pendingListenDao(): PendingListenDao
     abstract fun learnedExampleDao(): LearnedExampleDao
     abstract fun pendingFeedbackDao(): PendingFeedbackDao
+    abstract fun modeChoiceDao(): ModeChoiceDao
 }

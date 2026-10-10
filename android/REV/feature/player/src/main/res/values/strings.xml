@@ -14,6 +14,8 @@
     <string name="player_nothing">Nothing is playing.</string>
 
     <string name="queue_title">Queue</string>
+    <string name="smart_queue_mode_changed">Smart queue: reordered what\'s next for your listening mode</string>
+    <string name="smart_queue_mode_mix">Smart queue: a mix for %1$s</string>
     <string name="player_not_now">Not now</string>
     <string name="player_more_like_this">More like this</string>
     <string name="smart_queue_reshuffled">Smart queue: reshuffled what\'s next around what you\'ve been playing</string>

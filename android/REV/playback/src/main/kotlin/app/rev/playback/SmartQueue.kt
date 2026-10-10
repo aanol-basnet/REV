@@ -130,6 +130,34 @@ internal class SmartQueue(
         }
     }
 
+    /** You switched listening mode: what's next is reordered for it (not an album played in order). */
+    fun modeChanged() {
+        if (!enabled() || player.repeatMode != Player.REPEAT_MODE_OFF || player.currentMediaItem == null) return
+        val current = player.currentMediaItem?.toTrack() ?: return
+        val queue = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toTrack() }
+        if (QueueShape.of(queue, player.shuffleModeEnabled) == QueueShape.Album) return
+        work?.cancel()
+        work = scope.launch {
+            if (apply(Move.Reorder(QueueChange.ModeChanged), current, queue.size)) onChange(QueueNote(QueueChange.ModeChanged, current.title))
+        }
+    }
+
+    /** "Play for this mode": a fresh mix fitted to the listening mode, replacing the queue. */
+    fun playModeMix(modeName: String) {
+        work?.cancel()
+        work = scope.launch {
+            val profile = runCatching { taste.profile() }.getOrDefault(TasteProfile())
+            val recent = session.signals().map { it.track.id }
+            val request = director.modeMix(session.taste(profile), profile, recent)
+            val songs = ranker.rank(runCatching { autoplay.candidates(request) }.getOrDefault(emptyList())).take(Candidates.QUEUE_SIZE)
+            if (songs.isEmpty()) return@launch
+            player.setMediaItems(songs.map { toItem(it, QueueChange.ModeMix) })
+            player.prepare()
+            player.play()
+            onChange(QueueNote(QueueChange.ModeMix, modeName))
+        }
+    }
+
     /** Once you've stayed on a song you skipped to for a while, it counts as what you wanted. */
     private fun watchCurrent() {
         if (!arrivedBySkip) return
@@ -295,4 +323,7 @@ internal object QueueNotes {
 object FeedbackCommands {
     val NOT_NOW = androidx.media3.session.SessionCommand("app.rev.feedback.NOT_NOW", android.os.Bundle.EMPTY)
     val MORE_LIKE_THIS = androidx.media3.session.SessionCommand("app.rev.feedback.MORE_LIKE_THIS", android.os.Bundle.EMPTY)
+
+    /** Play a mix for the current listening mode. */
+    val PLAY_MODE_MIX = androidx.media3.session.SessionCommand("app.rev.mode.PLAY_MIX", android.os.Bundle.EMPTY)
 }

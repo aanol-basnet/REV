@@ -146,6 +146,27 @@ is connected), what you did during the song (seeks, pauses, favoriting via `Favo
 the smart queue's score. It waits in `pending_listens.context` (JSON) until the server has it.
 The fields and the export are described in [training-data.md](training-data.md).
 
+### Listening modes
+
+What you're doing while you listen: Driving solo, Driving with family (leans to familiar songs),
+At work (familiar), At home, Jam inspiration (leans to songs you haven't heard much), and your
+own (`custom:` ids, with a lean). The chip at the top of Home and the player opens the picker
+(`ModePicker` in `:core`; modes and the one in use in `ModeStore`, DataStore).
+
+- **Learning:** every listen records the mode (`mode`, `modeName`, `modeSource`); the taste
+  profile's `modes` say what you play more in each; the personal model has mode features and
+  crosses. `TasteScorer` adds the mode's taste and its lean; fresh mixes start from the mode's
+  taste.
+- **Automatic** (`ModeKeeper`, `ModeGuesser`): each pick is stored with its situation (output and
+  device name, part of the day, weekday or weekend, network, charging) in `mode_choices`; sessions
+  REV had no guess for are stored as "no mode". On each song start with no picked mode, a naive
+  Bayes guess (at least 3 picks, 60% sure, likelier than no mode) sets the mode. A picked mode
+  ends when the output changes from where its first song played, or after a break of 30 minutes
+  if it was picked before the break.
+- **Switching** mode starts the session's mood over and reorders what's next
+  (`QueueChange.ModeChanged`); **Play for this mode** (`FeedbackCommands.PLAY_MODE_MIX`) replaces
+  the queue with a mix for it.
+
 ### Feedback and the personal model
 
 **Not now** and **More like this** sit either side of Lyrics in the player and on the

@@ -171,6 +171,7 @@ export class ListeningService {
         year: r.year,
         genres: parseGenres(r.genres),
         durationMs: r.durationMs,
+        mode: modeOf(r.context),
       }));
   }
 
@@ -213,6 +214,18 @@ export class ListeningService {
 }
 
 const TASTE_DAYS = 730;
+
+function modeOf(context: string | null): string | null {
+  if (!context) return null;
+  try {
+    const value: unknown = JSON.parse(context);
+    const mode =
+      typeof value === 'object' && value !== null ? (value as { mode?: unknown }).mode : null;
+    return typeof mode === 'string' && mode.length > 0 ? mode : null;
+  } catch {
+    return null;
+  }
+}
 
 function parseGenres(json: string): string[] {
   try {

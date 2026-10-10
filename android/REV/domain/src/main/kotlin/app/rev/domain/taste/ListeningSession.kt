@@ -39,6 +39,10 @@ class ListeningSession(private val clock: () -> Long = System::currentTimeMillis
         while (signals.size > MAX_SIGNALS) signals.removeFirst()
     }
 
+    /** Starts the session's mood over, e.g. when you switch to another listening mode. */
+    @Synchronized
+    fun reset() = signals.clear()
+
     @Synchronized
     fun signals(): List<Signal> {
         expire()

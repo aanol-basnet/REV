@@ -83,6 +83,12 @@ enum class QueueChange {
 
     /** Something different, after skipping through everything. */
     FreshStart,
+
+    /** The rest of the queue reordered for the listening mode you switched to. */
+    ModeChanged,
+
+    /** A mix for the listening mode, started from it. */
+    ModeMix,
 }
 
 sealed interface Move {
@@ -122,7 +128,7 @@ sealed interface Trigger {
  *   artist's queue), except in an album.
  * - **More like this** (the button): the same, anywhere.
  */
-class QueueDirector(private val hour: () -> Int = { 12 }) {
+class QueueDirector(private val hour: () -> Int = { 12 }, private val mode: () -> String? = { null }) {
 
     fun decide(
         trigger: Trigger,
@@ -220,18 +226,26 @@ class QueueDirector(private val hour: () -> Int = { 12 }) {
     )
 
     /**
-     * Something different: what you did like this session, else what you usually play at this
-     * time of day, else your favorite artists; never the artists you just skipped.
+     * Something different: what you did like this session, else what you play in this mode, else
+     * at this time of day, else your favorite artists; never the artists you just skipped.
      */
-    private fun mood(streak: List<Track>, session: SessionTaste, profile: TasteProfile, current: Track, exclude: List<String>): CandidateRequest.Mood {
+    private fun mood(streak: List<Track>, session: SessionTaste, profile: TasteProfile, current: Track?, exclude: List<String>): CandidateRequest.Mood {
         val avoid = (streak.mapNotNull { it.artistId } + session.artists.filterValues { it < AVOID }.keys).distinct()
-        fun Map<String, Double>.best(n: Int) = filterValues { it > LIKED }.entries.sortedByDescending { it.value }.map { it.key }.take(n)
+        val modeTaste = mode()?.let { profile.modes[it] }
         val daypart = profile.daypart(hour())
-        val artists = session.artists.best(3).ifEmpty { daypart?.artists?.best(3).orEmpty() }.ifEmpty { profile.artists.best(3) } - avoid.toSet()
-        val genres = session.genres.best(2).ifEmpty { daypart?.genres?.best(2).orEmpty() }.ifEmpty { profile.genres.best(2) }
-            .ifEmpty { genres(listOf(current)) }
+        val artists = session.artists.best(3).ifEmpty { modeTaste?.artists?.best(3).orEmpty() }
+            .ifEmpty { daypart?.artists?.best(3).orEmpty() }.ifEmpty { profile.artists.best(3) } - avoid.toSet()
+        val genres = session.genres.best(2).ifEmpty { modeTaste?.genres?.best(2).orEmpty() }
+            .ifEmpty { daypart?.genres?.best(2).orEmpty() }.ifEmpty { profile.genres.best(2) }
+            .ifEmpty { current?.let { genres(listOf(it)) }.orEmpty() }
         return CandidateRequest.Mood(artists, genres, avoid, exclude)
     }
+
+    /** A mix for the current mode, from scratch: "Play for this mode". */
+    fun modeMix(session: SessionTaste, profile: TasteProfile, exclude: List<String>): CandidateRequest.Mood =
+        mood(emptyList(), session, profile, current = null, exclude = exclude)
+
+    private fun Map<String, Double>.best(n: Int) = filterValues { it > LIKED }.entries.sortedByDescending { it.value }.map { it.key }.take(n)
 
     /** Something you keep skipping (two recent skips, no plays) is coming up next. */
     private fun moodShift(session: SessionTaste, upcoming: List<Track>): Boolean = upcoming.take(LOOK_AHEAD).any {

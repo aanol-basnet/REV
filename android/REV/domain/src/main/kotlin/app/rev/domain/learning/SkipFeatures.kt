@@ -27,6 +27,8 @@ data class FeatureInput(
     val sessionPosition: Int?,
     val trackPlays: Int,
     val trackSkips: Int,
+    /** The listening mode (work, driving_solo, ...); null when none was set. */
+    val mode: String? = null,
 )
 
 object SkipFeatures {
@@ -55,10 +57,18 @@ object SkipFeatures {
         input.sessionSkips?.let { out += "ss:${countBucket(it)}" }
         input.sessionPosition?.let { out += "sp:${positionBucket(it)}" }
         out += listOf("tp:${countBucket(input.trackPlays)}", "tk:${countBucket(input.trackSkips)}")
+        val mode = input.mode?.takeIf(String::isNotEmpty)
+        mode?.let { out += "m:$it" }
         // Taste depends on the situation: an artist in the car, a genre late at night.
         input.artistId?.takeIf(String::isNotEmpty)?.let { artist ->
             input.output?.takeIf(String::isNotEmpty)?.let { out += "a:$artist|o:$it" }
             out += "a:$artist|p:$daypart"
+        }
+        // And on what you're doing: an artist at work, a genre with family in the car.
+        if (mode != null) {
+            input.artistId?.takeIf(String::isNotEmpty)?.let { out += "a:$it|m:$mode" }
+            genres.forEach { out += "g:$it|m:$mode" }
+            input.previousOutcome?.takeIf(String::isNotEmpty)?.let { out += "m:$mode|po:$it" }
         }
         genres.forEach { g ->
             out += "g:$g|p:$daypart"

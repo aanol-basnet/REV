@@ -42,6 +42,10 @@ export const ListenContext = z.looseObject({
   utcOffsetMinutes: z.number().int().min(-1000).max(1000).optional(),
   /** A favorite when it played. */
   favorite: z.boolean().optional(),
+  /** The listening mode (driving_solo, driving_family, work, home, jam, or custom:...), its name, and picked or auto. */
+  mode: z.string().max(80).nullish(),
+  modeName: z.string().max(80).nullish(),
+  modeSource: z.string().max(20).nullish(),
 
   // The phone when the song started.
   /** The audio device's name (a car kit, earbuds); none for the speaker. */
@@ -407,5 +411,11 @@ export const TasteProfile = z.object({
       artists: z.array(TasteArtist),
     }),
   ),
+  /** Listening modes and what's played more (positive) or less (negative) in them than usual. */
+  modes: z
+    .array(
+      z.object({ mode: z.string(), genres: z.array(TasteGenre), artists: z.array(TasteArtist) }),
+    )
+    .default([]),
 });
 export type TasteProfile = z.infer<typeof TasteProfile>;

@@ -11,6 +11,8 @@ import app.rev.domain.model.Mix
 import app.rev.domain.model.Result
 import app.rev.domain.model.Track
 import app.rev.domain.playback.PlaybackQueue
+import app.rev.core.ui.components.ModeControls
+import app.rev.domain.modes.ModeRepository
 import app.rev.domain.repository.ConnectionRepository
 import app.rev.domain.repository.DownloadsRepository
 import app.rev.domain.repository.HomeRepository
@@ -39,7 +41,11 @@ class HomeViewModel @Inject constructor(
     private val queue: PlaybackQueue,
     private val offlineMixes: OfflineMixRepository,
     connection: ConnectionRepository,
+    modes: ModeRepository,
 ) : ViewModel() {
+    /** What you're up to: the listening mode, picked from the top of Home. */
+    val mode = ModeControls(viewModelScope, modes, queue)
+
     /** The server can't be reached: Home leads with mixes from downloads. */
     val offline: StateFlow<Boolean> = connection.connectionState
         .map { it == ConnectionState.NoNetwork || it == ConnectionState.ServerUnreachable }

@@ -8,6 +8,11 @@ import app.rev.domain.model.MixKind
 import app.rev.domain.model.Result
 import app.rev.domain.model.Track
 import app.rev.domain.playback.PlaybackQueue
+import app.rev.domain.modes.ActiveMode
+import app.rev.domain.modes.BuiltInModes
+import app.rev.domain.modes.ListeningMode
+import app.rev.domain.modes.ModeLean
+import app.rev.domain.modes.ModeRepository
 import app.rev.domain.repository.ConnectionRepository
 import app.rev.domain.repository.DownloadsRepository
 import app.rev.domain.repository.HomeRepository
@@ -71,7 +76,16 @@ class HomeViewModelTest {
     }
 
     private fun viewModel(home: HomeRepository, queue: PlaybackQueue = FakeQueue(), offline: OfflineMixRepository = FakeOfflineMixes()) =
-        HomeViewModel(home, NoDownloads, queue, offline, FakeConnection())
+        HomeViewModel(home, NoDownloads, queue, offline, FakeConnection(), NoModes)
+
+    private object NoModes : ModeRepository {
+        override val modes: Flow<List<ListeningMode>> = flowOf(BuiltInModes.all)
+        override val active: Flow<ActiveMode?> = flowOf(null)
+        override suspend fun pick(modeId: String?) = Unit
+        override suspend fun setAuto(mode: ListeningMode?) = Unit
+        override suspend fun addCustom(name: String, lean: ModeLean) = ListeningMode("custom:x", name, lean)
+        override suspend fun removeCustom(id: String) = Unit
+    }
 
     private class FakeQueue : PlaybackQueue {
         val played = mutableListOf<List<Track>>()

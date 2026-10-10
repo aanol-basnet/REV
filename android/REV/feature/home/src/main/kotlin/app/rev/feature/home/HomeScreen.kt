@@ -46,6 +46,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import app.rev.core.ui.components.ModePicker
 import app.rev.core.ui.components.AlbumCard
 import app.rev.core.ui.components.Artwork
 import app.rev.core.ui.components.ArtworkSize
@@ -123,6 +124,7 @@ internal fun HomeScreen(navigator: HomeNavigator, viewModel: HomeViewModel = hil
                             .statusBarsPadding(),
                     ) {
                         Header(greeting, navigator.toSearch, navigator.toStats)
+                        ModePicker(viewModel.mode, Modifier.padding(start = 20.dp, bottom = 8.dp))
                         feed?.quickPicks?.takeIf { it.isNotEmpty() }?.let { QuickPicks(it, navigator.toAlbum) }
                     }
                 }
