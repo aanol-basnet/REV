@@ -303,3 +303,43 @@ export const SaveSmartPlaylistResult = z.object({
   created: z.boolean(),
 });
 export type SaveSmartPlaylistResult = z.infer<typeof SaveSmartPlaylistResult>;
+
+// Taste: what the app's smart queue knows about a user's listening, built from the log. Scores run
+// from -1 (mostly skipped) to 1 (played a lot, rarely skipped); recent listens count more.
+
+export const TasteQuery = z.object({ tz: ReportQuery.shape.tz });
+export type TasteQuery = z.infer<typeof TasteQuery>;
+
+const TasteScore = z.number().min(-1).max(1);
+
+export const TasteArtist = z.object({ id: z.string(), score: TasteScore });
+export const TasteGenre = z.object({ name: z.string(), score: TasteScore });
+
+export const TasteProfile = z.object({
+  generatedAt: z.number().int(),
+  /** Listens the profile was built from. */
+  listens: z.number().int().nonnegative(),
+  artists: z.array(TasteArtist),
+  genres: z.array(TasteGenre),
+  decades: z.array(z.object({ decade: z.number().int(), score: TasteScore })),
+  /** How often each song was played and skipped, for familiarity and songs you always skip. */
+  tracks: z.array(
+    z.object({
+      id: z.string(),
+      plays: z.number().int().nonnegative(),
+      skips: z.number().int().nonnegative(),
+    }),
+  ),
+  /**
+   * Four-hour parts of the day (local time) and what's played more (positive) or less
+   * (negative) in them than usual.
+   */
+  dayparts: z.array(
+    z.object({
+      fromHour: z.number().int().min(0).max(23),
+      genres: z.array(TasteGenre),
+      artists: z.array(TasteArtist),
+    }),
+  ),
+});
+export type TasteProfile = z.infer<typeof TasteProfile>;

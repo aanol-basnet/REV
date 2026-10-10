@@ -15,7 +15,6 @@ export type AutoplaySource = Pick<
   'artistAlbums' | 'similarArtists' | 'albumTracks' | 'listenedAlbums' | 'randomSongs'
 >;
 
-const RADIO_SIZE = 25;
 /** Similar artists asked for per seed artist. */
 const SIMILAR_PER_SEED = 5;
 const RADIO_ARTISTS = 10;
@@ -80,14 +79,23 @@ export class AutoplayService {
    */
   async artistSongs(req: ArtistContinuationRequest): Promise<Track[]> {
     const exclude = new Set(req.exclude);
-    const albums = await this.attempt(() => this.library.artistAlbums(req.artistId), []);
+    const skipAlbums = new Set(req.excludeAlbums);
+    const albums = (await this.attempt(() => this.library.artistAlbums(req.artistId), [])).filter(
+      (l) => !skipAlbums.has(l.album.id),
+    );
     const tracks = await Promise.all(
       albums.map((l) => this.attempt(() => this.library.albumTracks(l.album.id), [])),
     );
     const remaining = uniqueById(tracks.flat().filter((t) => !exclude.has(t.id)));
-    if (remaining.length > 0) return shuffle(remaining, this.random).slice(0, RADIO_SIZE);
+    if (remaining.length > 0) return shuffle(remaining, this.random).slice(0, req.size);
     return this.radio(
-      { artistIds: [req.artistId], genres: req.genres, exclude: req.exclude },
+      {
+        artistIds: [req.artistId],
+        genres: req.genres,
+        exclude: req.exclude,
+        avoidArtists: [],
+        size: req.size,
+      },
       { withoutSeeds: true },
     );
   }
@@ -95,16 +103,20 @@ export class AutoplayService {
   /** [withoutSeeds]: leave the seed artists' own songs out. */
   async radio(req: RadioRequest, { withoutSeeds = false } = {}): Promise<Track[]> {
     const exclude = new Set(req.exclude);
+    const avoid = new Set(req.avoidArtists);
+    const size = req.size;
     const seeds = req.artistIds.slice(0, 3);
     const similar = await Promise.all(
       seeds.map((id) => this.attempt(() => this.library.similarArtists(id, SIMILAR_PER_SEED), [])),
     );
     const seedSet = new Set(seeds);
     const others = uniqueStrings(interleave(similar).map((a) => a.id))
-      .filter((id) => !seedSet.has(id))
+      .filter((id) => !seedSet.has(id) && !avoid.has(id))
       .slice(0, RADIO_ARTISTS);
 
-    const allowed = (t: Track) => !withoutSeeds || t.artistId === null || !seedSet.has(t.artistId);
+    const allowed = (t: Track) =>
+      t.artistId === null ||
+      (!avoid.has(t.artistId) && (!withoutSeeds || !seedSet.has(t.artistId)));
     const [seedTracks, otherTracks, genreTracks] = await Promise.all([
       withoutSeeds ? [] : Promise.all(seeds.map((id) => this.artistTracks(id, exclude))),
       Promise.all(others.map((id) => this.artistTracks(id, exclude))),
@@ -126,18 +138,18 @@ export class AutoplayService {
         this.random,
       ),
     );
-    const own = shuffle(seedTracks.flat(), this.random);
+    const own = shuffle(seedTracks.flat().filter(allowed), this.random);
     const mixed: Track[] = [];
     let o = 0;
     let s = 0;
-    while (mixed.length < RADIO_SIZE && (o < pool.length || s < own.length)) {
+    while (mixed.length < size && (o < pool.length || s < own.length)) {
       const ownTurn = mixed.length % 4 === 3;
       if (ownTurn && s < own.length) mixed.push(own[s++] as Track);
       else if (o < pool.length) mixed.push(pool[o++] as Track);
       else mixed.push(own[s++] as Track);
     }
     let result = uniqueById(mixed);
-    if (result.length < RADIO_SIZE) {
+    if (result.length < size) {
       // A small or unconnected library: fill up with anything.
       const random = await this.attempt(() => this.library.randomSongs(50), []);
       const taken = new Set(result.map((t) => t.id));
@@ -146,7 +158,7 @@ export class AutoplayService {
         ...random
           .map((l) => l.track)
           .filter((t) => !exclude.has(t.id) && !taken.has(t.id) && allowed(t)),
-      ].slice(0, RADIO_SIZE);
+      ].slice(0, size);
     }
     return result;
   }

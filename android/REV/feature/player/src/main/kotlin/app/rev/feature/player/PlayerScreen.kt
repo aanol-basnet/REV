@@ -72,6 +72,7 @@ internal fun PlayerScreen(navigator: PlayerNavigator, viewModel: PlayerViewModel
     val favorite by viewModel.isFavorite.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     ErrorSnackbarEffect(viewModel.errors, snackbar)
+    QueueNoteSnackbarEffect(state, snackbar)
     val addToPlaylist = rememberAddToPlaylist()
     AddToPlaylistHost(addToPlaylist, snackbar)
     val track = state.current

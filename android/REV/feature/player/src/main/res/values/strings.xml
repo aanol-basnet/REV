@@ -14,6 +14,13 @@
     <string name="player_nothing">Nothing is playing.</string>
 
     <string name="queue_title">Queue</string>
+    <string name="smart_queue_reshuffled">Smart queue: reshuffled what\'s next around what you\'ve been playing</string>
+    <string name="smart_queue_mood_shift">Smart queue: moved back songs like the ones you\'ve been skipping</string>
+    <string name="smart_queue_more_like_this">Smart queue: up next, more like “%1$s”</string>
+    <string name="smart_queue_other_album">Smart queue: up next, their other albums</string>
+    <string name="smart_queue_other_artist">Smart queue: up next, similar artists</string>
+    <string name="smart_queue_next_album">Smart queue: up next, a different album</string>
+    <string name="smart_queue_fresh_start">Smart queue: up next, something different, from what you liked today</string>
     <string name="queue_clear">Clear</string>
     <string name="queue_save_as_playlist">Save</string>
     <string name="player_add_to_playlist">Add to playlist</string>

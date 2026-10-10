@@ -136,15 +136,48 @@ queue works shuffled or not: the queue shows play order and `queueMove` turns a 
 move that produces it. Drop targets are measured from the laid-out rows (`dropTarget`), so rows
 that grow with large fonts land where they're dropped.
 
-**Follow my skips** (Settings → Playback, on by default; `SkipFollower`, `SkipStreak`,
-`SkipSteering`): three early skips in a row (leaving a song in its first 30 s, or first half if
-shorter; going back doesn't count, a song played through resets the streak) followed by 30 s on
-one song replace everything after it in play order with songs like it. They come from
-`POST /api/autoplay/radio` seeded with that song's artist and genre, or from downloads when the
-server can't be reached (same artist first, then the genre); the skipped songs' artists are left
-out unless that leaves fewer than 10. New songs are added before the old ones are removed so
-autoplay never sees an ended queue. It stays out of the way with repeat on and for albums played
-in order.
+### Smart queue
+
+Settings → Playback → **Smart queue** (on by default) adapts the rest of the queue to what you skip.
+The pieces live in `:domain` (`app.rev.domain.taste`), with `SmartQueue` in `:playback` doing the
+listening and the queue edits.
+
+- **Signals** (`SmartQueue` → `ListeningSession`): each song you leave ends as a `QuickSkip`
+  (first 30 s, or first half if shorter), a `LateSkip` (before half-way), `Played`, or `Stayed`
+  (skipped or went back to it, then stayed 30 s). Going back isn't a verdict on the song you left
+  and keeps the skip streak; a song heard past the start ends it. The session forgets after 30 min
+  without listening.
+- **Session taste** (`SessionTaste`): per artist, genre, decade and album a score from -1 to 1,
+  newest signals counting most (×0.85 per step back), plus whether you're staying on songs you
+  know or new ones (via the profile's play counts).
+- **Taste profile** (`TasteRepository`, `GET /api/stats/taste`): long-term scores from the
+  server's listening log: artists, genres, decades, per-song plays and skips, and what's played
+  more or less in each 4-hour part of the day. Refreshed every 6 h, cached in
+  `taste_profile.json` so it works offline; cleared when switching server.
+- **Scoring** (`TasteScorer`): session mood first, then the profile, the time of day, the
+  familiar-or-new preference, a penalty for songs you nearly always skip and songs already heard
+  this session, a small bonus for favorites. `rank` adds Gumbel noise (temperature 0.35) so the
+  order varies, then spreads artists out.
+- **Rules** (`QueueDirector`, by `QueueShape`):
+
+  | Queue                    | What happens                                                                                                                                                                                                                                                             |
+  | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+  | Shuffle / playlist / mix | 3 skips: reorder what's next by mood. On shuffle, before that: if an artist or genre you skipped twice is coming up, reorder. 6 skips: replace with a fresh mix of what you liked this session (else this time of day, else your top artists), avoiding skipped artists. |
+  | One artist (top songs)   | 3 skips, 2+ from one album: their other albums. Skips across albums: similar artists without them. 6 skips: similar artists.                                                                                                                                             |
+  | Album in order           | Skipping to a song is picking it. 4 skips: a different album. 8: a fresh mix.                                                                                                                                                                                            |
+  | Staying after 3+ skips   | Songs like that one, without the skipped artists (in an artist's queue, more of their songs, ranked towards that song's album and era). Not in an album.                                                                                                                 |
+
+- **Candidates** (`AutoplayRepository.candidates`): `LikeTrack` and `Mood` use
+  `POST /api/autoplay/radio` with `avoidArtists` and `size: 60`, `ArtistSongs` uses
+  `POST /api/autoplay/artist` with `excludeAlbums`, `NextAlbum` the next-album endpoint. Without
+  a server, `Candidates.fromDownloads` picks the same kinds of songs from downloads. The best 25
+  by score go in.
+- **Queue edits:** only what comes after the current song changes. Replacements are added
+  before the old songs are removed, so autoplay never sees an ended queue; a reorder on shuffle
+  sets a new `QueueShuffleOrder`, in order it moves items. Nothing changes with repeat on.
+- **Autoplay** ranks its similar-songs continuations the same way (60 fetched, best 25 kept).
+- **Telling you:** each change goes to the app as session extras (`QueueNotes`), shown as a
+  snackbar on the player and a line at the top of the queue.
 
 ## Search
 

@@ -59,6 +59,7 @@ import app.rev.domain.repository.SearchRepository
 import app.rev.domain.repository.ServerRepository
 import app.rev.domain.model.Result
 import app.rev.domain.model.ServerUrl
+import app.rev.data.stats.TasteRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -166,10 +167,12 @@ object DataModule {
         libraryDao: LibraryDao,
         downloadJobDao: DownloadJobDao,
         home: HomeRepositoryImpl,
+        taste: TasteRepositoryImpl,
     ): ServerRepository = ServerRepositoryImpl(api, store, terminator) {
         libraryDao.clearAll()
         downloadJobDao.clear()
         home.clear()
+        taste.clear()
         // Downloaded files stay: they are the user's music, and play without any server.
     }
 

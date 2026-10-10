@@ -71,6 +71,9 @@ class QueueShuffleOrder private constructor(
     }
 
     companion object {
+        /** Exactly [order] (queue indices in play order), as when the smart queue reorders what's next. */
+        fun of(order: List<Int>, random: Random = Random.Default): QueueShuffleOrder = QueueShuffleOrder(order.toIntArray(), random)
+
         /** A fresh shuffle of [length] songs that starts with [first], as when shuffle is turned on mid-queue. */
         fun startingWith(first: Int, length: Int, random: Random = Random.Default): QueueShuffleOrder {
             if (first !in 0 until length) return QueueShuffleOrder((0 until length).shuffled(random).toIntArray(), random)

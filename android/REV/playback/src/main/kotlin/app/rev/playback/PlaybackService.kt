@@ -2,6 +2,12 @@ package app.rev.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
+import app.rev.domain.taste.ListeningSession
+import app.rev.domain.taste.QueueDirector
+import app.rev.domain.taste.TasteRanker
+import app.rev.domain.taste.TasteRepository
+import java.time.LocalTime
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -74,6 +80,9 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var searchRepository: SearchRepository
     @Inject lateinit var castLinks: CastLinks
     @Inject lateinit var autoplay: AutoplayRepository
+    @Inject lateinit var listeningSession: ListeningSession
+    @Inject lateinit var taste: TasteRepository
+    @Inject lateinit var ranker: TasteRanker
     private lateinit var tree: LibraryTree
 
     private val replayGain = ReplayGainAudioProcessor()
@@ -136,7 +145,14 @@ class PlaybackService : MediaLibraryService() {
 
         queuePersister = QueuePersister(player, queueStore, scope) { it.systemArtworkUri() }.also { it.start() }
         AutoplayExtender(player, scope, autoplay, enabled = { settings.autoplay }, toItem = ::queueItem).start()
-        SkipFollower(player, scope, autoplay, enabled = { settings.followSkips }, toItem = ::queueItem).start()
+        SmartQueue(
+            player, scope, autoplay, listeningSession, taste, ranker, QueueDirector(hour = { LocalTime.now().hour }),
+            enabled = { settings.smartQueue },
+            toItem = ::queueItem,
+            onChange = ::publishQueueNote,
+        ).start()
+        // Have the taste profile ready (and fresh) before the first skip.
+        scope.launch { runCatching { taste.profile() } }
 
         tree = LibraryTree(
             libraryRepository,
@@ -218,6 +234,17 @@ class PlaybackService : MediaLibraryService() {
             val art = runCatching { widgetArtwork.forCover(state.coverArtId) }.getOrNull()
             runCatching { NowPlayingWidget.publish(applicationContext, state.copy(artworkPath = art?.path, accent = art?.accent)) }
         }
+    }
+
+    /** Tells the app (through the session's extras) what the smart queue just changed. */
+    private fun publishQueueNote(note: QueueNote) {
+        mediaSession?.setSessionExtras(
+            Bundle().apply {
+                putString(QueueNotes.CHANGE, note.change.name)
+                putString(QueueNotes.TITLE, note.title)
+                putLong(QueueNotes.AT, System.currentTimeMillis())
+            },
+        )
     }
 
     private fun applyReplayGain(item: MediaItem?) {

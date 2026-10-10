@@ -20,7 +20,16 @@ import app.rev.domain.playback.CastLinks
 import app.rev.domain.playback.PlaybackReporter
 import app.rev.domain.playback.QueueStore
 import app.rev.domain.playback.TrackSourceResolver
+import android.content.Context
+import app.rev.data.stats.TasteRepositoryImpl
+import app.rev.domain.taste.ListeningSession
+import app.rev.domain.taste.TasteRanker
+import app.rev.domain.taste.TasteRepository
 import dagger.Module
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.time.LocalTime
+import java.util.TimeZone
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -56,7 +65,26 @@ object PlaybackDataModule {
 
     @Provides
     @Singleton
-    fun provideAutoplay(api: LibraryApi, offline: OfflineRepository): AutoplayRepository = AutoplayRepositoryImpl(api, offline)
+    fun provideAutoplay(api: LibraryApi, offline: OfflineRepository, ranker: TasteRanker): AutoplayRepository =
+        AutoplayRepositoryImpl(api, offline, ranker)
+
+    /** The current listening session, shared by the smart queue and autoplay. */
+    @Provides
+    @Singleton
+    fun provideListeningSession(): ListeningSession = ListeningSession()
+
+    @Provides
+    @Singleton
+    fun provideTasteRepositoryImpl(@ApplicationContext context: Context, api: LibraryApi): TasteRepositoryImpl =
+        TasteRepositoryImpl(api, File(context.filesDir, "taste_profile.json"), timeZone = { TimeZone.getDefault().id })
+
+    @Provides
+    fun provideTasteRepository(impl: TasteRepositoryImpl): TasteRepository = impl
+
+    @Provides
+    @Singleton
+    fun provideTasteRanker(session: ListeningSession, taste: TasteRepository): TasteRanker =
+        TasteRanker(session, taste, hour = { LocalTime.now().hour })
 
     @Provides
     @Singleton

@@ -153,8 +153,8 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { playbackSettings.setAutoplay(enabled) }
     }
 
-    fun setFollowSkips(enabled: Boolean) {
-        viewModelScope.launch { playbackSettings.setFollowSkips(enabled) }
+    fun setSmartQueue(enabled: Boolean) {
+        viewModelScope.launch { playbackSettings.setSmartQueue(enabled) }
     }
 
     fun setWifiOnly(enabled: Boolean) {

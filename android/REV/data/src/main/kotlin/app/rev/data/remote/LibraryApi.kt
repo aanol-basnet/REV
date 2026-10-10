@@ -1,5 +1,6 @@
 package app.rev.data.remote
 
+import app.rev.domain.playback.Autoplay
 import app.rev.domain.model.Album
 import app.rev.domain.model.AlbumDetail
 import app.rev.domain.model.Artist
@@ -141,21 +142,36 @@ class LibraryApi(
             }
         }) { response -> response.body<NextAlbumDto>().tracks.map { it.toDomain() } }
 
-    /** Songs like the given artists and genres (autoplay after a playlist or mix). */
-    suspend fun radio(artistIds: List<String>, genres: List<String>, exclude: List<String>): Result<List<Track>, LibraryError> =
+    /**
+     * Songs like the given artists and genres (autoplay after a playlist or mix), never by
+     * [avoidArtists]; up to [size] for the smart queue to pick from.
+     */
+    suspend fun radio(
+        artistIds: List<String>,
+        genres: List<String>,
+        exclude: List<String>,
+        avoidArtists: List<String> = emptyList(),
+        size: Int = Autoplay.RADIO_SIZE,
+    ): Result<List<Track>, LibraryError> =
         send("autoplay/radio", { url ->
             http.client.post(url) {
                 contentType(ContentType.Application.Json)
-                setBody(RadioRequestDto(artistIds, genres, exclude))
+                setBody(RadioRequestDto(artistIds, genres, exclude, avoidArtists, size))
             }
         }) { response -> response.body<RadioTracksDto>().tracks.map { it.toDomain() } }
 
     /** More of one artist's songs, then similar artists once theirs run out (autoplay after their top songs). */
-    suspend fun artistContinuation(artistId: String, genres: List<String>, exclude: List<String>): Result<List<Track>, LibraryError> =
+    suspend fun artistContinuation(
+        artistId: String,
+        genres: List<String>,
+        exclude: List<String>,
+        excludeAlbums: List<String> = emptyList(),
+        size: Int = Autoplay.RADIO_SIZE,
+    ): Result<List<Track>, LibraryError> =
         send("autoplay/artist", { url ->
             http.client.post(url) {
                 contentType(ContentType.Application.Json)
-                setBody(ArtistContinuationRequestDto(artistId, genres, exclude))
+                setBody(ArtistContinuationRequestDto(artistId, genres, exclude, excludeAlbums, size))
             }
         }) { response -> response.body<RadioTracksDto>().tracks.map { it.toDomain() } }
 
@@ -232,6 +248,10 @@ class LibraryApi(
             parameter("offset", offset)
             parameter("tz", timeZone)
         }) { it }
+
+    /** What the smart queue knows about your listening (`GET /api/stats/taste`). */
+    internal suspend fun taste(timeZone: String): Result<TasteProfileDto, LibraryError> =
+        get<TasteProfileDto, _>("stats/taste", { parameter("tz", timeZone) }) { it }
 
     internal suspend fun smartPlaylists(timeZone: String): Result<SmartPlaylistsDto, LibraryError> =
         get<SmartPlaylistsDto, _>("stats/playlists", { parameter("tz", timeZone) }) { it }

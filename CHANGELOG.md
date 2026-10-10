@@ -3,6 +3,29 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.4.0 — 2026-10-10
+
+### New
+
+- **Smart queue** (replaces Follow my skips). REV now learns what you're in the mood for from how
+  you skip, and from your listening history: the artists, genres and eras you love or skip, the
+  songs you always skip, and what you usually play at this time of day. Works offline too.
+- On shuffle or a playlist: three skips reshuffle what's next around what you've been enjoying.
+  Skip one artist or genre twice and the rest of it moves back. Keep skipping (six) and you get
+  something fresh, from what you liked today.
+- Playing one artist: skip through one of their albums and their other albums come next; skip
+  across their albums and similar artists take over.
+- Playing an album in order: skipping to a song is just picking it. Skip four in a row and a
+  different album is lined up.
+- Stop on a song after skipping, and what's next becomes songs like it.
+- When the queue changes, the player tells you why, and the queue shows it at the top.
+
+### Changed
+
+- Autoplay's similar songs are now picked to fit your session and taste, from a bigger pool.
+- The setting is now Settings → Playback → Smart queue. This needs the updated REV server for
+  your history; without it, it learns from this session only.
+
 ## 0.3.0 — 2026-10-10
 
 ### New

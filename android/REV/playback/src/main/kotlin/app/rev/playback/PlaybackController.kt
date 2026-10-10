@@ -2,6 +2,7 @@ package app.rev.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -44,6 +45,9 @@ data class PlayerState(
     val hasNext: Boolean = false,
     /** Set when playback stopped on an error it could not skip past. */
     val error: String? = null,
+    /** The smart queue's latest change to this queue, with when it happened. */
+    val queueNote: QueueNote? = null,
+    val queueNoteAt: Long = 0,
 ) {
     val isActive: Boolean get() = current != null
 }
@@ -77,7 +81,13 @@ class PlaybackController @Inject constructor(
         connecting = true
         scope.launch {
             val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-            val mediaController = MediaController.Builder(context, token).buildAsync().await()
+            val mediaController = MediaController.Builder(context, token)
+                .setListener(object : MediaController.Listener {
+                    override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+                        QueueNotes.read(extras)?.let { (note, at) -> _state.value = _state.value.copy(queueNote = note, queueNoteAt = at) }
+                    }
+                })
+                .buildAsync().await()
             mediaController.addListener(listener)
             controller.complete(mediaController)
             publish(mediaController)
@@ -88,6 +98,8 @@ class PlaybackController @Inject constructor(
 
     override fun play(tracks: List<Track>, startIndex: Int, shuffle: Boolean) = command {
         if (tracks.isEmpty()) return@command
+        // A new queue: the smart queue's last change was about the old one.
+        _state.value = _state.value.copy(queueNote = null, queueNoteAt = 0)
         shuffleModeEnabled = shuffle
         // Shuffled, start from the first song of the new play order so every song gets played.
         if (shuffle) setMediaItems(tracks.map { it.toItem() }, true)
@@ -189,6 +201,8 @@ class PlaybackController @Inject constructor(
             hasPrevious = player.mediaItemCount > 0,
             hasNext = player.hasNextMediaItem(),
             error = player.playerError?.let(::describe),
+            queueNote = _state.value.queueNote,
+            queueNoteAt = _state.value.queueNoteAt,
         )
         updateProgress(player)
         if (player.isPlaying) startProgressUpdates(player) else progressJob?.cancel()

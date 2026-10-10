@@ -1,5 +1,13 @@
 import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
-import type { Listen, ListenBatchResult, ListeningReport, ReportQuery, Track } from '@rev/schemas';
+import type {
+  Listen,
+  ListenBatchResult,
+  ListeningReport,
+  ReportQuery,
+  TasteProfile,
+  TasteQuery,
+  Track,
+} from '@rev/schemas';
 import type { Db } from '../db/client.js';
 import { plays } from '../db/schema.js';
 import { UpstreamError } from '../adapters/errors.js';
@@ -11,7 +19,8 @@ import {
   type PlayRow,
   periodBounds,
 } from './report.js';
-import { Zone } from './zone.js';
+import { buildTaste } from './taste.js';
+import { DAY_MS, Zone } from './zone.js';
 
 /** The parts of the music server the listening log needs. */
 export interface ListeningSource {
@@ -109,6 +118,13 @@ export class ListeningService {
     });
   }
 
+  /** The smart queue's taste profile, from the last two years of listens. */
+  taste(userId: number, query: TasteQuery): TasteProfile {
+    const now = this.now();
+    const rows = this.rows(userId, { from: now - TASTE_DAYS * DAY_MS, to: now + DAY_MS });
+    return buildTaste(rows, new Zone(query.tz), now);
+  }
+
   private exists(userId: number, listen: Listen): boolean {
     const row = this.db
       .select({ id: plays.id })
@@ -194,6 +210,8 @@ export class ListeningService {
     return { firstArtistPlay, firstTrackPlay, playDays, earliest };
   }
 }
+
+const TASTE_DAYS = 730;
 
 function parseGenres(json: string): string[] {
   try {

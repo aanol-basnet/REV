@@ -194,11 +194,15 @@ What to append when the queue runs out. The app picks the request from the queue
 - `POST /api/autoplay/next-album` `{ albumId, artistId, genre, exclude }`, after whole albums:
   `{ album, tracks }` for the artist's next release, else an album by a similar artist, the genre,
   or any album.
-- `POST /api/autoplay/artist` `{ artistId, genres, exclude }`, after a queue of one artist's songs
-  (such as their top songs): `{ tracks }` with up to 25 of the artist's songs not in `exclude`,
-  shuffled. When none are left, a radio of similar artists and the genres without the artist.
-- `POST /api/autoplay/radio` `{ artistIds, genres, exclude }`, after anything else: `{ tracks }`,
-  25 songs from similar artists and the genres, with the seed artists every fourth song.
+- `POST /api/autoplay/artist` `{ artistId, genres, exclude, excludeAlbums?, size? }`, after a
+  queue of one artist's songs (such as their top songs): `{ tracks }` with up to `size` (default
+  25, max 60) of the artist's songs not in `exclude` or from `excludeAlbums`, shuffled. When none
+  are left, a radio of similar artists and the genres without the artist.
+- `POST /api/autoplay/radio` `{ artistIds, genres, exclude, avoidArtists?, size? }`, after
+  anything else: `{ tracks }`, up to `size` songs from similar artists and the genres, with the
+  seed artists every fourth song, never by `avoidArtists`.
+
+The app's smart queue uses the same endpoints with a bigger `size` and ranks the songs itself.
 
 ### Casting
 
@@ -272,6 +276,28 @@ boundaries follow `tz` (IANA, default UTC). The report (`ListeningReport` in
 | `rhythm`                                            | Plays by hour, weekday and a 7×24 heatmap                                                                     |
 | `timeline`                                          | Per day (week, month) or per month (year, all time), each with its top genre and artist                       |
 | `streaks`, `sessions`, `variety`                    | Consecutive days, listening sessions (30 min gap), how spread out your artists were (0–100)                   |
+
+### `GET /api/stats/taste?tz=Europe/Berlin`
+
+What the app's smart queue knows about your listening, from the last two years of the log
+(recent listens count more: weight halves every 180 days). Scores are -1 to 1: plays against
+skips (early skips count fully, later ones half), pulled toward 0 with little to go on.
+
+```json
+{
+  "generatedAt": 1791000000000,
+  "listens": 5120,
+  "artists": [{ "id": "ar-1", "score": 0.91 }],
+  "genres": [{ "name": "Progressive Metal", "score": 0.84 }],
+  "decades": [{ "decade": 2000, "score": 0.7 }],
+  "tracks": [{ "id": "tr-1", "plays": 31, "skips": 2 }],
+  "dayparts": [{ "fromHour": 20, "genres": [{ "name": "Ambient", "score": 1 }], "artists": [] }]
+}
+```
+
+`dayparts` are six 4-hour parts of the local day; their scores say how much more (up to 1) or
+less (down to -1) a genre or artist is played then than usual. Parts with fewer than 20 plays are
+empty.
 
 ### Smart playlists
 

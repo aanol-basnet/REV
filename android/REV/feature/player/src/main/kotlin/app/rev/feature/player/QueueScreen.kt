@@ -99,6 +99,7 @@ internal fun QueueScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltVi
         var dragOffset by remember { mutableFloatStateOf(0f) }
 
         LazyColumn(Modifier.fillMaxSize(), state = listState) {
+            state.queueNote?.let { note -> item(key = "note") { QueueNoteHeader(note) } }
             // Positions are in play order (shuffled or not); the controller turns them into queue moves.
             items(state.queue, key = QueueEntry::key) { entry ->
                 val isDragging = dragging == entry.key

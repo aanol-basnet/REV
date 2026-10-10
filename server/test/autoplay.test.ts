@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Album, Track } from '@rev/schemas';
-import { NextAlbum, RadioTracks } from '@rev/schemas';
+import { ArtistContinuationRequest, NextAlbum, RadioRequest, RadioTracks } from '@rev/schemas';
 import type { ListenedAlbum } from '../src/adapters/navidrome/library.js';
 import { AutoplayService, type AutoplaySource } from '../src/home/autoplay.js';
 import { seeded } from '../src/home/service.js';
@@ -128,15 +128,30 @@ describe('autoplay', () => {
   });
 
   it('builds a radio from similar artists, without songs already queued', async () => {
-    const tracks = await service().radio({
-      artistIds: ['ar-Tool'],
-      genres: [],
-      exclude: ['apc1-1'],
-    });
+    const tracks = await service().radio(
+      RadioRequest.parse({
+        artistIds: ['ar-Tool'],
+        genres: [],
+        exclude: ['apc1-1'],
+      }),
+    );
     expect(tracks).toHaveLength(25);
     expect(new Set(tracks.map((t) => t.id)).size).toBe(25);
     expect(tracks.map((t) => t.id)).not.toContain('apc1-1');
     expect(tracks.some((t) => t.artist === 'APC' || t.artist === 'Soen')).toBe(true);
+  });
+
+  it('avoids artists that were just skipped, and returns a bigger pool when asked', async () => {
+    const tracks = await service().radio(
+      RadioRequest.parse({
+        artistIds: ['ar-Tool'],
+        genres: [],
+        avoidArtists: ['ar-APC'],
+        size: 40,
+      }),
+    );
+    expect(tracks.length).toBeGreaterThan(25);
+    expect(tracks.filter((t) => t.artistId === 'ar-APC')).toEqual([]);
   });
 });
 
@@ -147,25 +162,37 @@ describe('artist autoplay', () => {
   );
 
   it("continues with the artist's songs not yet played", async () => {
-    const tracks = await service().artistSongs({
-      artistId: 'ar-Tool',
-      genres: [],
-      exclude: ['lateralus-1', '10k-2'],
-    });
+    const tracks = await service().artistSongs(
+      ArtistContinuationRequest.parse({
+        artistId: 'ar-Tool',
+        genres: [],
+        exclude: ['lateralus-1', '10k-2'],
+      }),
+    );
     expect(tracks.map((t) => t.id).sort()).toEqual(
       toolSongs.filter((id) => id !== 'lateralus-1' && id !== '10k-2').sort(),
     );
   });
 
   it('moves to similar artists, without the artist, once all their songs were played', async () => {
-    const tracks = await service().artistSongs({
-      artistId: 'ar-Tool',
-      genres: ['Metal'],
-      exclude: toolSongs,
-    });
+    const tracks = await service().artistSongs(
+      ArtistContinuationRequest.parse({
+        artistId: 'ar-Tool',
+        genres: ['Metal'],
+        exclude: toolSongs,
+      }),
+    );
     expect(tracks.length).toBeGreaterThan(0);
     expect(tracks.some((t) => t.artist === 'APC' || t.artist === 'Soen')).toBe(true);
     expect(tracks.filter((t) => t.artist === 'Tool')).toEqual([]);
+  });
+
+  it('leaves out albums being skipped', async () => {
+    const tracks = await service().artistSongs(
+      ArtistContinuationRequest.parse({ artistId: 'ar-Tool', excludeAlbums: ['lateralus'] }),
+    );
+    expect(tracks.length).toBe(6);
+    expect(tracks.filter((t) => t.id.startsWith('lateralus-'))).toEqual([]);
   });
 });
 

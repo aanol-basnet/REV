@@ -77,7 +77,7 @@ fun SettingsRoute(onOpenSystemStatus: () -> Unit, onOpenEqualizer: () -> Unit, v
         onReplayGainChange = viewModel::setReplayGain,
         onCrossfadeChange = viewModel::setCrossfade,
         onAutoplayChange = viewModel::setAutoplay,
-        onFollowSkipsChange = viewModel::setFollowSkips,
+        onSmartQueueChange = viewModel::setSmartQueue,
         onSmartChange = viewModel::setSmartDownloads,
         onSaveLocalUrl = viewModel::saveLocalUrl,
         onAutomaticLocalUrl = viewModel::useAutomaticLocalAddress,
@@ -99,7 +99,7 @@ internal fun SettingsScreen(
     onReplayGainChange: (ReplayGainMode) -> Unit = {},
     onCrossfadeChange: (Int) -> Unit = {},
     onAutoplayChange: (Boolean) -> Unit = {},
-    onFollowSkipsChange: (Boolean) -> Unit = {},
+    onSmartQueueChange: (Boolean) -> Unit = {},
     onSmartChange: (SmartDownloadSettings) -> Unit = {},
     onSaveLocalUrl: (String) -> Unit = {},
     onAutomaticLocalUrl: () -> Unit = {},
@@ -225,14 +225,14 @@ internal fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.playback_follow_skips), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.playback_smart_queue), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        stringResource(R.string.playback_follow_skips_detail),
+                        stringResource(R.string.playback_smart_queue_detail),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(checked = state.playback.followSkips, onCheckedChange = onFollowSkipsChange)
+                Switch(checked = state.playback.smartQueue, onCheckedChange = onSmartQueueChange)
             }
             Spacer(Modifier.height(8.dp))
             Row(

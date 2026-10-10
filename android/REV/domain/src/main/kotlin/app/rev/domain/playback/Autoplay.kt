@@ -2,6 +2,7 @@ package app.rev.domain.playback
 
 import app.rev.domain.model.Track
 import app.rev.domain.offline.OfflineMixes
+import app.rev.domain.taste.CandidateRequest
 import kotlin.random.Random
 
 /** Keeps the music going when the queue runs out (Settings → Playback → Autoplay). */
@@ -9,8 +10,8 @@ interface AutoplayRepository {
     /** What to append after [queue]: the next album, or songs like the queue's. Empty when nothing fits. */
     suspend fun continuation(queue: List<Track>): List<Track>
 
-    /** Songs like [seed] to replace the rest of [queue], avoiding the [skipped] songs' artists ([SkipSteering]). */
-    suspend fun songsLike(seed: Track, queue: List<Track>, skipped: List<Track>): List<Track>
+    /** Songs for the smart queue to rank ([app.rev.domain.taste.QueueDirector]); from downloads without a server. */
+    suspend fun candidates(request: CandidateRequest): List<Track>
 }
 
 /**

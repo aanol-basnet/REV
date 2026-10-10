@@ -32,7 +32,7 @@ class EqualizerViewModelTest {
         override suspend fun setReplayGain(mode: ReplayGainMode) = Unit
         override suspend fun setCrossfadeSeconds(seconds: Int) = Unit
         override suspend fun setAutoplay(enabled: Boolean) = Unit
-        override suspend fun setFollowSkips(enabled: Boolean) = Unit
+        override suspend fun setSmartQueue(enabled: Boolean) = Unit
         override suspend fun setEqualizer(equalizer: EqualizerSettings) = settings.update { it.copy(equalizer = equalizer) }
     }
 

@@ -22,6 +22,10 @@ export const RadioRequest = z.object({
   genres: z.array(z.string().max(200)).max(10),
   /** Songs not to pick (already in the queue). */
   exclude: z.array(Id).max(1000).default([]),
+  /** Artists not to pick from at all (ones just skipped). */
+  avoidArtists: z.array(Id).max(50).default([]),
+  /** How many songs to return at most; a bigger pool lets the app pick by taste. */
+  size: z.number().int().min(1).max(60).default(25),
 });
 export type RadioRequest = z.infer<typeof RadioRequest>;
 
@@ -34,6 +38,9 @@ export const ArtistContinuationRequest = z.object({
   genres: z.array(z.string().max(200)).max(10).default([]),
   /** Songs not to pick (already in the queue). */
   exclude: z.array(Id).max(1000).default([]),
+  /** Albums of theirs not to pick from (ones being skipped). */
+  excludeAlbums: z.array(Id).max(100).default([]),
+  size: z.number().int().min(1).max(60).default(25),
 });
 export type ArtistContinuationRequest = z.infer<typeof ArtistContinuationRequest>;
 

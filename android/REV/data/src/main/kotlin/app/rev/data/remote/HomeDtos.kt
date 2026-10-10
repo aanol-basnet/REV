@@ -72,10 +72,22 @@ internal data class NextAlbumRequestDto(
 internal data class NextAlbumDto(val tracks: List<TrackDto>)
 
 @Serializable
-internal data class RadioRequestDto(val artistIds: List<String>, val genres: List<String>, val exclude: List<String>)
+internal data class RadioRequestDto(
+    val artistIds: List<String>,
+    val genres: List<String>,
+    val exclude: List<String>,
+    val avoidArtists: List<String>,
+    val size: Int,
+)
 
 @Serializable
-internal data class ArtistContinuationRequestDto(val artistId: String, val genres: List<String>, val exclude: List<String>)
+internal data class ArtistContinuationRequestDto(
+    val artistId: String,
+    val genres: List<String>,
+    val exclude: List<String>,
+    val excludeAlbums: List<String>,
+    val size: Int,
+)
 
 @Serializable
 internal data class RadioTracksDto(val tracks: List<TrackDto>)

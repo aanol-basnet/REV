@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { ListenBatchResult, ListeningReport } from '@rev/schemas';
+import { ListenBatchResult, ListeningReport, TasteProfile } from '@rev/schemas';
 import { periodBounds } from '../src/stats/report.js';
 import { Zone } from '../src/stats/zone.js';
 import { createTestApp, signedInHeaders, type TestContext } from './helpers.js';
@@ -393,5 +393,35 @@ describe('listening statistics', () => {
     expect((await report(headers, 'period=month&tz=UTC')).streaks.currentDays).toBe(4);
     now = NOW + 2 * DAY;
     expect((await report(headers, 'period=month&tz=UTC')).streaks.currentDays).toBe(0);
+  });
+
+  it('builds a taste profile: loved and skipped artists, songs and when you play them', async () => {
+    const { headers } = await setup();
+    const listens: ListenInput[] = [];
+    // Tool played every evening for a week; Bjork skipped each time.
+    for (let d = 1; d <= 7; d++) {
+      const evening = NOW - d * DAY + 8 * HOUR;
+      listens.push({ trackId: 's1', startedAt: evening, kind: 'play' });
+      listens.push({ trackId: 's2', startedAt: evening + 600_000, kind: 'play' });
+      listens.push({
+        trackId: 's4',
+        startedAt: evening + 1_200_000,
+        kind: 'skip',
+        listenedMs: 5_000,
+      });
+    }
+    expect((await send(headers, listens)).statusCode).toBe(200);
+
+    const res = await t.app.inject({ url: '/api/stats/taste?tz=UTC', headers });
+    expect(res.statusCode).toBe(200);
+    const taste = TasteProfile.parse(res.json());
+    expect(taste.listens).toBe(21);
+    const artist = (name: string) => taste.artists.find((a) => a.id === `ar-${name}`)?.score ?? 0;
+    expect(artist('Tool')).toBeGreaterThan(0.8);
+    expect(artist('Bjork')).toBeLessThan(-0.5);
+    expect(taste.genres.find((g) => g.name === 'Progressive Metal')?.score).toBeGreaterThan(0.8);
+    expect(taste.tracks.find((tr) => tr.id === 's4')).toEqual({ id: 's4', plays: 0, skips: 7 });
+    expect(taste.dayparts).toHaveLength(6);
+    expect((await t.app.inject({ url: '/api/stats/taste' })).statusCode).toBe(401);
   });
 });

@@ -61,6 +61,13 @@ object RevIcons {
                 "l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z",
         )
     }
+    /** Sparkles: something the smart queue did. */
+    val AutoAwesome: ImageVector by lazy {
+        icon(
+            "AutoAwesome",
+            "M19,9l1.25,-2.75L23,5l-2.75,-1.25L19,1l-1.25,2.75L15,5l2.75,1.25L19,9zM11.5,9.5L9,4L6.5,9.5L1,12l5.5,2.5L9,20l2.5,-5.5L17,12l-5.5,-2.5zM19,15l-1.25,2.75L15,19l2.75,1.25L19,23l1.25,-2.75L23,19l-2.75,-1.25L19,15z",
+        )
+    }
     val DragHandle: ImageVector by lazy { icon("DragHandle", "M20,9H4v2h16V9zM4,15h16v-2H4v2z") }
     val Collapse: ImageVector by lazy { icon("Collapse", "M7.41,8.59L12,13.17l4.59,-4.58L18,10l-6,6 -6,-6 1.41,-1.41z") }
 

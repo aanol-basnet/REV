@@ -1,5 +1,8 @@
 package app.rev.data.remote
 
+import app.rev.domain.taste.Daypart
+import app.rev.domain.taste.TasteProfile
+import app.rev.domain.taste.TrackHistory
 import app.rev.domain.model.Discoveries
 import app.rev.domain.model.ListeningReport
 import app.rev.domain.model.ListeningRhythm
@@ -294,3 +297,41 @@ internal data class SmartPlaylistDetailDto(val id: String, val tracks: List<Trac
 internal data class SaveSmartPlaylistResultDto(val playlistId: String, val created: Boolean) {
     fun toDomain() = SavedSmartPlaylist(playlistId, created)
 }
+
+@Serializable
+internal data class TasteProfileDto(
+    val artists: List<TasteArtistDto> = emptyList(),
+    val genres: List<TasteGenreDto> = emptyList(),
+    val decades: List<TasteDecadeDto> = emptyList(),
+    val tracks: List<TasteTrackDto> = emptyList(),
+    val dayparts: List<TasteDaypartDto> = emptyList(),
+) {
+    fun toDomain() = TasteProfile(
+        artists = artists.associate { it.id to it.score },
+        genres = genres.associate { it.name.lowercase() to it.score },
+        decades = decades.associate { it.decade to it.score },
+        tracks = tracks.associate { it.id to TrackHistory(it.plays, it.skips) },
+        dayparts = dayparts.map { part ->
+            Daypart(part.fromHour, part.genres.associate { it.name.lowercase() to it.score }, part.artists.associate { it.id to it.score })
+        },
+    )
+}
+
+@Serializable
+internal data class TasteArtistDto(val id: String, val score: Double)
+
+@Serializable
+internal data class TasteGenreDto(val name: String, val score: Double)
+
+@Serializable
+internal data class TasteDecadeDto(val decade: Int, val score: Double)
+
+@Serializable
+internal data class TasteTrackDto(val id: String, val plays: Int, val skips: Int)
+
+@Serializable
+internal data class TasteDaypartDto(
+    val fromHour: Int,
+    val genres: List<TasteGenreDto> = emptyList(),
+    val artists: List<TasteArtistDto> = emptyList(),
+)

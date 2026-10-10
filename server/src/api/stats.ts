@@ -10,6 +10,8 @@ import {
   SmartPlaylistId,
   SmartPlaylistQuery,
   SmartPlaylists,
+  TasteProfile,
+  TasteQuery,
 } from '@rev/schemas';
 import { authOf, requireAuth } from '../auth/middleware.js';
 import type { AuthService } from '../auth/service.js';
@@ -48,6 +50,12 @@ export function statsRoutes(
   app.get('/api/stats/report', { preHandler }, async (req) => {
     const query = parseInput(ReportQuery, req.query);
     return ListeningReport.parse(service().report(authOf(req).userId, query));
+  });
+
+  // What the app's smart queue learns from: scores per artist, genre, decade, song and time of day.
+  app.get('/api/stats/taste', { preHandler }, async (req) => {
+    const query = parseInput(TasteQuery, req.query);
+    return TasteProfile.parse(service().taste(authOf(req).userId, query));
   });
 
   // Smart playlists, made from the log; saving writes (or updates) a Navidrome playlist.
