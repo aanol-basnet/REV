@@ -9,7 +9,12 @@ phone and watch apps. The version code is derived from it, so only that one line
 - `+0.1.0` (patch back to 0) for a big feature
 - `1.0.0` once the app feels finished
 
-Put the bump in the same commit and mention the new version in the summary. Updates are installed
+Put the bump in the same commit and mention the new version in the summary.
+
+Each bump also gets an entry at the top of `CHANGELOG.md` (`## <version> — <date>`, then `### New`,
+`### Fixed` or `### Changed` and `- ` items). The app shows these as patch notes when you tap the
+version in Settings, so write them for the person using the app, in plain language. A unit test
+(`ChangelogTest`) fails if the newest entry doesn't match `rev.version`. Updates are installed
 by reinstalling a debug build (`./gradlew installDebug`); there is no release or auto-update
 pipeline, so don't add one unless asked. The version shows at the bottom of Settings.
 

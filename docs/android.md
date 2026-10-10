@@ -43,6 +43,11 @@ version code is derived from it (`1.2.3` → `10203`), so Android always sees a 
 update. Every commit bumps the version: `0.0.1` for fixes and small changes, `0.1.0` for a big
 feature, and `1.0.0` once the app feels finished. The version is shown at the bottom of Settings.
 
+Each version has patch notes in the repo's `CHANGELOG.md`. The settings module copies that file
+into the app's assets at build time, and tapping the version at the bottom of Settings shows them,
+newest first, with the installed version marked. `ChangelogTest` checks that the newest entry
+matches `rev.version`.
+
 ## Server connection and security
 
 | Concern          | Implementation                                                                                                                                                                                                                                                                                                                                |

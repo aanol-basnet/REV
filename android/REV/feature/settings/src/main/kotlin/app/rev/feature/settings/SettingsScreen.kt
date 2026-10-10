@@ -104,6 +104,7 @@ internal fun SettingsScreen(
 ) {
     var confirmRemoveAll by remember { mutableStateOf(false) }
     var editLocal by remember { mutableStateOf(false) }
+    var showChangelog by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -301,13 +302,17 @@ internal fun SettingsScreen(
 
         if (appVersion != null) {
             Spacer(Modifier.height(28.dp))
-            Text(
-                stringResource(R.string.settings_app_version, appVersion),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+            TextButton(onClick = { showChangelog = true }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text(
+                    stringResource(R.string.settings_app_version, appVersion),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
+    }
+    if (showChangelog) {
+        ChangelogSheet(installedVersion = appVersion, onDismiss = { showChangelog = false })
     }
     if (editLocal) {
         LocalAddressDialog(
