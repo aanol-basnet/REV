@@ -57,4 +57,29 @@ class AutoplayTest {
         assertTrue("aenima-1" !in songs.map { it.id })
         assertEquals("Tool", songs.first().artist)
     }
+
+    @Test
+    fun `one artist's songs continue with more of theirs, features included`() {
+        val top = listOf(
+            track("a", "x", "Tool", genre = "Metal"),
+            track("b", "y", "Tool", genre = "Metal"),
+            track("c", "z", "Tool feat. Someone").copy(artistId = "ar-feat"),
+        )
+        assertEquals(Autoplay.Plan.Artist("ar-Tool", listOf("Metal"), listOf("a", "b", "c")), Autoplay.plan(top))
+        // One song, or a song by someone else, is a radio as before.
+        assertTrue(Autoplay.plan(top.take(1)) is Autoplay.Plan.Radio)
+        assertTrue(Autoplay.plan(top + track("d", "w", "Adele")) is Autoplay.Plan.Radio)
+    }
+
+    @Test
+    fun `offline, an artist continues with their downloaded songs, then others in the genre`() {
+        val downloaded = album("aenima", "Tool", genre = "Metal") + album("soen1", "Soen", genre = "Metal") + album("adele21", "Adele", genre = "Pop")
+        val more = Autoplay.fromDownloads(Autoplay.Plan.Artist("ar-Tool", listOf("Metal"), listOf("aenima-1")), downloaded, Random(1))
+        assertEquals((2..5).map { "aenima-$it" }.toSet(), more.map { it.id }.toSet())
+
+        val played = (1..5).map { "aenima-$it" }
+        val after = Autoplay.fromDownloads(Autoplay.Plan.Artist("ar-Tool", listOf("Metal"), played), downloaded, Random(1))
+        assertTrue(after.none { it.artist == "Tool" })
+        assertEquals("Soen", after.first().artist)
+    }
 }

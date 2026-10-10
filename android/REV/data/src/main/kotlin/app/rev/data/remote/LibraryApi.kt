@@ -150,6 +150,15 @@ class LibraryApi(
             }
         }) { response -> response.body<RadioTracksDto>().tracks.map { it.toDomain() } }
 
+    /** More of one artist's songs, then similar artists once theirs run out (autoplay after their top songs). */
+    suspend fun artistContinuation(artistId: String, genres: List<String>, exclude: List<String>): Result<List<Track>, LibraryError> =
+        send("autoplay/artist", { url ->
+            http.client.post(url) {
+                contentType(ContentType.Application.Json)
+                setBody(ArtistContinuationRequestDto(artistId, genres, exclude))
+            }
+        }) { response -> response.body<RadioTracksDto>().tracks.map { it.toDomain() } }
+
     suspend fun systemStatus(): Result<SystemStatus, LibraryError> =
         get<SystemStatusDto, _>("system/status") { it.toDomain() }
 

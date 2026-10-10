@@ -12,8 +12,9 @@ interface AutoplayRepository {
 
 /**
  * Decides how to continue a queue, and continues it from downloads when the server can't help.
- * A queue made of whole albums (each album's songs together) continues with another album; any
- * other queue (a playlist, a mix, search results) continues with similar songs.
+ * A queue made of whole albums (each album's songs together) continues with another album; a
+ * queue of one artist's songs (their top songs) continues with the rest of their songs, then
+ * similar artists; any other queue (a playlist, a mix, search results) continues with similar songs.
  */
 object Autoplay {
     const val RADIO_SIZE = 25
@@ -26,6 +27,7 @@ object Autoplay {
     sealed interface Plan {
         data class NextAlbum(val albumId: String, val artistId: String?, val genre: String?, val excludeAlbums: List<String>) : Plan
         data class Radio(val artistIds: List<String>, val genres: List<String>, val excludeTracks: List<String>) : Plan
+        data class Artist(val artistId: String, val genres: List<String>, val excludeTracks: List<String>) : Plan
     }
 
     fun plan(queue: List<Track>): Plan? {
@@ -36,10 +38,14 @@ object Autoplay {
         if (albums) {
             return Plan.NextAlbum(last.albumId!!, last.artistId, last.genre, queue.mapNotNull { it.albumId }.distinct())
         }
+        val genres = queue.takeLast(SEED_WINDOW).mapNotNull { it.genre?.takeIf(String::isNotBlank) }.mostCommon(2)
+        singleArtist(queue)?.let { artistId ->
+            return Plan.Artist(artistId, genres, queue.map { it.id }.distinct().takeLast(MAX_EXCLUDED_TRACKS))
+        }
         val recent = queue.takeLast(SEED_WINDOW)
         return Plan.Radio(
             artistIds = recent.mapNotNull { it.artistId }.mostCommon(3),
-            genres = recent.mapNotNull { it.genre?.takeIf(String::isNotBlank) }.mostCommon(2),
+            genres = genres,
             excludeTracks = queue.map { it.id }.distinct().takeLast(MAX_EXCLUDED_TRACKS),
         )
     }
@@ -60,6 +66,30 @@ object Autoplay {
             val (related, rest) = fresh.partition { it.artistId in plan.artistIds || it.genre?.lowercase() in genres }
             OfflineMixes.spreadArtists(related.shuffled(random) + rest.shuffled(random)).take(RADIO_SIZE)
         }
+        is Plan.Artist -> {
+            val excluded = plan.excludeTracks.toSet()
+            val fresh = downloaded.filter { it.id !in excluded }
+            val (theirs, others) = fresh.partition { it.artistId == plan.artistId }
+            if (theirs.isNotEmpty()) {
+                theirs.shuffled(random).take(RADIO_SIZE)
+            } else {
+                val genres = plan.genres.map { it.lowercase() }.toSet()
+                val (sameGenre, rest) = others.partition { it.genre?.lowercase() in genres }
+                OfflineMixes.spreadArtists(sameGenre.shuffled(random) + rest.shuffled(random)).take(RADIO_SIZE)
+            }
+        }
+    }
+
+    /**
+     * The artist when every song in [queue] is theirs, counting songs credited to them with others
+     * ("Artist feat. Someone"). A single song isn't enough to go on.
+     */
+    private fun singleArtist(queue: List<Track>): String? {
+        if (queue.size < 2) return null
+        val main = queue.mapNotNull { it.artistId }.mostCommon(1).firstOrNull() ?: return null
+        val name = queue.first { it.artistId == main }.artist
+        val theirs = queue.all { it.artistId == main || (name.isNotBlank() && it.artist.contains(name, ignoreCase = true)) }
+        return main.takeIf { theirs }
     }
 
     private fun runsByAlbum(queue: List<Track>): List<List<Track>> {

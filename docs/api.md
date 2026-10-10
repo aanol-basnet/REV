@@ -187,6 +187,19 @@ tracks) or `discovery` (never-played tracks). In every mix, songs by one artist 
 least three apart where the mix allows. Play counts come from the one Navidrome account REV uses, so
 they're shared by all REV users.
 
+### Autoplay
+
+What to append when the queue runs out. The app picks the request from the queue's shape:
+
+- `POST /api/autoplay/next-album` `{ albumId, artistId, genre, exclude }`, after whole albums:
+  `{ album, tracks }` for the artist's next release, else an album by a similar artist, the genre,
+  or any album.
+- `POST /api/autoplay/artist` `{ artistId, genres, exclude }`, after a queue of one artist's songs
+  (such as their top songs): `{ tracks }` with up to 25 of the artist's songs not in `exclude`,
+  shuffled. When none are left, a radio of similar artists and the genres without the artist.
+- `POST /api/autoplay/radio` `{ artistIds, genres, exclude }`, after anything else: `{ tracks }`,
+  25 songs from similar artists and the genres, with the seed artists every fourth song.
+
 ### Casting
 
 `POST /api/cast/token` (authenticated) returns `{ baseUrl, token, expiresAt }`. A Chromecast can't

@@ -28,7 +28,8 @@ server, and none of those services needs to be exposed to the internet.
   closing the app, and you get lock-screen, notification and headset controls.
 - **Home**: recently played, mixes built from your listening, similar artists, albums you haven't
   heard, and rediscoveries.
-- **Autoplay**: when the queue runs out, REV plays the next album or similar songs.
+- **Autoplay**: when the queue runs out, REV plays the next album, more by the same artist, or
+  similar songs.
 - **Offline**: download albums or playlists to the phone; smart downloads keep your favorites and
   recent listening on the device.
 - **Lyrics**: synced lyrics that follow the song, from your files or [LRCLIB](https://lrclib.net),

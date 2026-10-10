@@ -1,4 +1,11 @@
-import type { Album, NextAlbum, NextAlbumRequest, RadioRequest, Track } from '@rev/schemas';
+import type {
+  Album,
+  ArtistContinuationRequest,
+  NextAlbum,
+  NextAlbumRequest,
+  RadioRequest,
+  Track,
+} from '@rev/schemas';
 import type { ListenedAlbum, NavidromeLibrary } from '../adapters/navidrome/library.js';
 import { interleave, shuffle, spreadArtists, uniqueById } from './service.js';
 
@@ -16,7 +23,8 @@ const TRACKS_PER_ARTIST = 4;
 
 /**
  * Keeps music going when the queue runs out. After an album: the artist's next release, else an
- * album by a similar artist, else one in the same genre, else any album. After anything else
+ * album by a similar artist, else one in the same genre, else any album. After one artist's songs
+ * (their top songs): the rest of their songs, then similar artists. After anything else
  * (a playlist, a mix, search results): songs like the queue's, from its artists, similar
  * artists and its genres. Everything comes from the library, so it all plays.
  */
@@ -66,7 +74,26 @@ export class AutoplayService {
     return any[0]?.album ?? null;
   }
 
-  async radio(req: RadioRequest): Promise<Track[]> {
+  /**
+   * More of the artist's songs not yet played, in random order. When there are none left: a radio
+   * of similar artists and the genre, leaving the artist out.
+   */
+  async artistSongs(req: ArtistContinuationRequest): Promise<Track[]> {
+    const exclude = new Set(req.exclude);
+    const albums = await this.attempt(() => this.library.artistAlbums(req.artistId), []);
+    const tracks = await Promise.all(
+      albums.map((l) => this.attempt(() => this.library.albumTracks(l.album.id), [])),
+    );
+    const remaining = uniqueById(tracks.flat().filter((t) => !exclude.has(t.id)));
+    if (remaining.length > 0) return shuffle(remaining, this.random).slice(0, RADIO_SIZE);
+    return this.radio(
+      { artistIds: [req.artistId], genres: req.genres, exclude: req.exclude },
+      { withoutSeeds: true },
+    );
+  }
+
+  /** [withoutSeeds]: leave the seed artists' own songs out. */
+  async radio(req: RadioRequest, { withoutSeeds = false } = {}): Promise<Track[]> {
     const exclude = new Set(req.exclude);
     const seeds = req.artistIds.slice(0, 3);
     const similar = await Promise.all(
@@ -77,8 +104,9 @@ export class AutoplayService {
       .filter((id) => !seedSet.has(id))
       .slice(0, RADIO_ARTISTS);
 
+    const allowed = (t: Track) => !withoutSeeds || t.artistId === null || !seedSet.has(t.artistId);
     const [seedTracks, otherTracks, genreTracks] = await Promise.all([
-      Promise.all(seeds.map((id) => this.artistTracks(id, exclude))),
+      withoutSeeds ? [] : Promise.all(seeds.map((id) => this.artistTracks(id, exclude))),
       Promise.all(others.map((id) => this.artistTracks(id, exclude))),
       Promise.all(
         req.genres
@@ -93,7 +121,10 @@ export class AutoplayService {
 
     // Mostly similar artists and the genre, with the queue's own artists every fourth song.
     const pool = spreadArtists(
-      shuffle(uniqueById([...interleave(otherTracks), ...genreTracks.flat()]), this.random),
+      shuffle(
+        uniqueById([...interleave(otherTracks), ...genreTracks.flat()]).filter(allowed),
+        this.random,
+      ),
     );
     const own = shuffle(seedTracks.flat(), this.random);
     const mixed: Track[] = [];
@@ -112,7 +143,9 @@ export class AutoplayService {
       const taken = new Set(result.map((t) => t.id));
       result = [
         ...result,
-        ...random.map((l) => l.track).filter((t) => !exclude.has(t.id) && !taken.has(t.id)),
+        ...random
+          .map((l) => l.track)
+          .filter((t) => !exclude.has(t.id) && !taken.has(t.id) && allowed(t)),
       ].slice(0, RADIO_SIZE);
     }
     return result;

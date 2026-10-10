@@ -140,6 +140,35 @@ describe('autoplay', () => {
   });
 });
 
+describe('artist autoplay', () => {
+  const service = () => new AutoplayService(source(), seeded(7));
+  const toolSongs = ['aenima', 'lateralus', '10k'].flatMap((a) =>
+    [1, 2, 3].map((n) => `${a}-${n}`),
+  );
+
+  it("continues with the artist's songs not yet played", async () => {
+    const tracks = await service().artistSongs({
+      artistId: 'ar-Tool',
+      genres: [],
+      exclude: ['lateralus-1', '10k-2'],
+    });
+    expect(tracks.map((t) => t.id).sort()).toEqual(
+      toolSongs.filter((id) => id !== 'lateralus-1' && id !== '10k-2').sort(),
+    );
+  });
+
+  it('moves to similar artists, without the artist, once all their songs were played', async () => {
+    const tracks = await service().artistSongs({
+      artistId: 'ar-Tool',
+      genres: ['Metal'],
+      exclude: toolSongs,
+    });
+    expect(tracks.length).toBeGreaterThan(0);
+    expect(tracks.some((t) => t.artist === 'APC' || t.artist === 'Soen')).toBe(true);
+    expect(tracks.filter((t) => t.artist === 'Tool')).toEqual([]);
+  });
+});
+
 describe('autoplay routes', () => {
   let t: TestContext;
   afterEach(async () => {
@@ -215,6 +244,14 @@ describe('autoplay routes', () => {
       headers,
     });
     expect(RadioTracks.parse(radio.json()).tracks.length).toBeGreaterThan(0);
+
+    const artist = await t.app.inject({
+      method: 'POST',
+      url: '/api/autoplay/artist',
+      payload: { artistId: 'ar-1', exclude: ['tr-1'] },
+      headers,
+    });
+    expect(RadioTracks.parse(artist.json()).tracks.map((x) => x.id)).toContain('tr-2');
 
     const bad = await t.app.inject({
       method: 'POST',

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
+  ArtistContinuationRequest,
   HomeFeed,
   HomeQuery,
   MixId,
@@ -47,6 +48,11 @@ export function homeRoutes(
   app.post('/api/autoplay/next-album', { preHandler }, async (req) => {
     const body = parseInput(NextAlbumRequest, req.body);
     return NextAlbum.parse(await configured(autoplay).nextAlbum(body));
+  });
+
+  app.post('/api/autoplay/artist', { preHandler }, async (req) => {
+    const body = parseInput(ArtistContinuationRequest, req.body);
+    return RadioTracks.parse({ tracks: await configured(autoplay).artistSongs(body) });
   });
 
   app.post('/api/autoplay/radio', { preHandler }, async (req) => {

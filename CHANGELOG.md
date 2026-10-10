@@ -3,6 +3,14 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.2.5 — 2026-10-10
+
+### Changed
+
+- After an artist's top songs, the queue carries on with more of that artist's songs until you've
+  heard them all, and only then moves on to similar artists in the same genre. This needs the
+  updated REV server; with an older one, it moves on to similar songs as before.
+
 ## 0.2.4 — 2026-10-10
 
 ### Changed
