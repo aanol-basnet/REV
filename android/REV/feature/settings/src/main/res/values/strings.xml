@@ -4,7 +4,7 @@
     <string name="settings_section_account">Account</string>
     <string name="settings_address">Address</string>
     <string name="settings_status">Status</string>
-    <string name="settings_version">Version</string>
+    <string name="settings_version">Server version</string>
     <string name="settings_signed_in_as">Signed in as</string>
     <string name="settings_check_now">Check now</string>
     <string name="settings_change_server">Change server</string>
@@ -38,7 +38,7 @@
     <string name="connection_hint_unreachable">Can\'t reach your server. Check that it\'s running and that your phone is online.</string>
     <string name="connection_hint_wrong_server">A different REV server is answering at this address. Change server and sign in again.</string>
     <string name="settings_system_status">System status</string>
-    <string name="settings_app_version">REV %1$s</string>
+    <string name="settings_app_version">REV app version %1$s</string>
     <string name="system_title">System</string>
     <string name="system_services">Services</string>
     <string name="system_library">Library</string>

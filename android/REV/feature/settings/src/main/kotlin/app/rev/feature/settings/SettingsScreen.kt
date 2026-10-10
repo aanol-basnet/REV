@@ -139,7 +139,7 @@ internal fun SettingsScreen(
                 ConnectionBadge(state.connection, showRoute = state.localUrl != null)
             }
             (state.connection as? ConnectionState.Online)?.let {
-                Field(stringResource(R.string.settings_version), "REV ${it.info.version}")
+                Field(stringResource(R.string.settings_version), it.info.version)
             }
             connectionHint(state.connection)?.let {
                 Text(
