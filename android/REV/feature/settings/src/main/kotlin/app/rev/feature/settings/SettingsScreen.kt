@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -60,8 +61,11 @@ import app.rev.domain.playback.ReplayGainMode
 @Composable
 fun SettingsRoute(onOpenSystemStatus: () -> Unit, onOpenEqualizer: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val appVersion = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
     SettingsScreen(
         state = state,
+        appVersion = appVersion,
         onRecheck = viewModel::recheck,
         onSignOut = viewModel::signOut,
         onChangeServer = viewModel::changeServer,
@@ -82,6 +86,7 @@ fun SettingsRoute(onOpenSystemStatus: () -> Unit, onOpenEqualizer: () -> Unit, v
 @Composable
 internal fun SettingsScreen(
     state: SettingsUiState,
+    appVersion: String? = null,
     onRecheck: () -> Unit,
     onSignOut: () -> Unit,
     onChangeServer: () -> Unit,
@@ -292,6 +297,16 @@ internal fun SettingsScreen(
             OutlinedButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.settings_sign_out))
             }
+        }
+
+        if (appVersion != null) {
+            Spacer(Modifier.height(28.dp))
+            Text(
+                stringResource(R.string.settings_app_version, appVersion),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
         }
     }
     if (editLocal) {
@@ -513,7 +528,11 @@ private fun SettingsPreview() {
                 username = "alice",
                 connection = ConnectionState.Online(ServerInfo("0.1.0", "abc")),
             ),
-            {}, {}, {}, {},
+            appVersion = "0.2.0",
+            onRecheck = {},
+            onSignOut = {},
+            onChangeServer = {},
+            onOpenSystemStatus = {},
         )
     }
 }

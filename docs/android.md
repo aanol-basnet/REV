@@ -36,6 +36,13 @@ and set `JAVA_HOME` if `java` is not on your `PATH`.
 ./gradlew installDebug      # install on a connected device
 ```
 
+## Versioning
+
+The phone and watch apps share one version, `rev.version` in `android/REV/gradle.properties`. The
+version code is derived from it (`1.2.3` → `10203`), so Android always sees a newer build as an
+update. Every commit bumps the version: `0.0.1` for fixes and small changes, `0.1.0` for a big
+feature, and `1.0.0` once the app feels finished. The version is shown at the bottom of Settings.
+
 ## Server connection and security
 
 | Concern          | Implementation                                                                                                                                                                                                                                                                                                                                |

@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// From rev.version in gradle.properties; 1.2.3 becomes version code 10203.
+val revVersion = providers.gradleProperty("rev.version").get()
+val revVersionCode = revVersion.split('.').map(String::toInt).let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
+
 android {
     namespace = "app.rev.wear"
     compileSdk = 37
@@ -14,8 +18,8 @@ android {
         applicationId = "app.rev"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionName = revVersion
+        versionCode = revVersionCode
     }
 
     buildTypes {

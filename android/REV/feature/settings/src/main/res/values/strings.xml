@@ -38,6 +38,7 @@
     <string name="connection_hint_unreachable">Can\'t reach your server. Check that it\'s running and that your phone is online.</string>
     <string name="connection_hint_wrong_server">A different REV server is answering at this address. Change server and sign in again.</string>
     <string name="settings_system_status">System status</string>
+    <string name="settings_app_version">REV %1$s</string>
     <string name="system_title">System</string>
     <string name="system_services">Services</string>
     <string name="system_library">Library</string>
