@@ -1,5 +1,6 @@
 package app.rev.data.remote
 
+import app.rev.domain.playback.ListenContext
 import app.rev.domain.taste.Daypart
 import app.rev.domain.taste.TasteProfile
 import app.rev.domain.taste.TrackHistory
@@ -32,7 +33,91 @@ import kotlinx.serialization.Serializable
 // Wire types for /api/stats, mirroring shared/schemas/src/stats.ts.
 
 @Serializable
-internal data class ListenDto(val trackId: String, val startedAt: Long, val kind: String, val listenedMs: Long? = null)
+internal data class ListenDto(
+    val trackId: String,
+    val startedAt: Long,
+    val kind: String,
+    val listenedMs: Long? = null,
+    val context: ListenContextDto? = null,
+)
+
+/**
+ * A listen's context on the wire (`ListenContext` in the server's schemas), flat. No defaults, so
+ * every value is sent (the JSON setup leaves out values equal to a default).
+ */
+@Serializable
+internal data class ListenContextDto(
+    val v: Int,
+    val source: String,
+    val smartChange: String?,
+    val queueShape: String?,
+    val shuffle: Boolean,
+    val repeat: String,
+    val queuePosition: Int,
+    val queueLength: Int,
+    val previousTrackId: String?,
+    val previousOutcome: String?,
+    val sessionPosition: Int,
+    val sessionSkips: Int,
+    val endReason: String?,
+    val output: String,
+    val utcOffsetMinutes: Int,
+    val favorite: Boolean,
+    val outputName: String?,
+    val network: String?,
+    val charging: Boolean?,
+    val screenOn: Boolean?,
+    val volume: Double?,
+    val startPositionMs: Long,
+    val endPositionMs: Long?,
+    val seeksForward: Int,
+    val seeksBack: Int,
+    val seekedForwardMs: Long,
+    val seekedBackMs: Long,
+    val pauses: Int,
+    val pausedMs: Long,
+    val volumeEnd: Double?,
+    val favoritedDuring: Boolean?,
+    val predictedScore: Double?,
+)
+
+internal fun ListenContext.toDto() = ListenContextDto(
+    v = CONTEXT_VERSION,
+    source = source.wire,
+    smartChange = smartChange,
+    queueShape = queueShape,
+    shuffle = shuffle,
+    repeat = repeat.name.lowercase(),
+    queuePosition = queuePosition,
+    queueLength = queueLength,
+    previousTrackId = previousTrackId,
+    previousOutcome = previousOutcome,
+    sessionPosition = sessionPosition,
+    sessionSkips = sessionSkips,
+    endReason = endReason?.wire,
+    output = output.wire,
+    utcOffsetMinutes = utcOffsetMinutes,
+    favorite = favorite,
+    outputName = device?.outputName,
+    network = device?.network,
+    charging = device?.charging,
+    screenOn = device?.screenOn,
+    volume = device?.volume?.let { kotlin.math.round(it * 1000) / 1000 },
+    startPositionMs = behaviour.startPositionMs,
+    endPositionMs = behaviour.endPositionMs,
+    seeksForward = behaviour.seeksForward,
+    seeksBack = behaviour.seeksBack,
+    seekedForwardMs = behaviour.seekedForwardMs,
+    seekedBackMs = behaviour.seekedBackMs,
+    pauses = behaviour.pauses,
+    pausedMs = behaviour.pausedMs,
+    volumeEnd = behaviour.volumeEnd?.let { kotlin.math.round(it * 1000) / 1000 },
+    favoritedDuring = behaviour.favoritedDuring,
+    predictedScore = predictedScore?.let { kotlin.math.round(it * 1000) / 1000 },
+)
+
+/** Version of the context shape; bump when fields change meaning. */
+internal const val CONTEXT_VERSION = 1
 
 @Serializable
 internal data class ListenBatchDto(val listens: List<ListenDto>)

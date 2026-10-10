@@ -136,6 +136,16 @@ queue works shuffled or not: the queue shows play order and `queueMove` turns a 
 move that produces it. Drop targets are measured from the laid-out rows (`dropTarget`), so rows
 that grow with large fonts land where they're dropped.
 
+### Listening context
+
+`PlayReportTracker` sends every play and skip with a `ListenContext`: how the song got into the
+queue (a `QueueSource` in the media item's extras: picked, queued, autoplay, smart, restored, car),
+the queue, session and previous song, how a skip ended (`EndReason`), the phone's situation
+(`DeviceState`: output and its name, network, charging, screen, volume; `car` while Android Auto
+is connected), what you did during the song (seeks, pauses, favoriting via `FavoriteEvents`) and
+the smart queue's score. It waits in `pending_listens.context` (JSON) until the server has it.
+The fields and the export are described in [training-data.md](training-data.md).
+
 ### Smart queue
 
 Settings → Playback → **Smart queue** (on by default) adapts the rest of the queue to what you skip.

@@ -1,6 +1,8 @@
 package app.rev.domain.playback
 
 import app.rev.domain.model.Track
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 /** Queue commands available to any screen that lists tracks. */
 interface PlaybackQueue {
@@ -43,10 +45,108 @@ interface ArtworkUrls {
  */
 interface PlaybackReporter {
     suspend fun nowPlaying(trackId: String)
-    suspend fun played(trackId: String, startedAt: Long)
+    suspend fun played(trackId: String, startedAt: Long, context: ListenContext? = null)
 
     /** Moved on to another track after [listenedMs], before it counted as a play. */
-    suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long)
+    suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext? = null)
+}
+
+/** How a song got into the queue. */
+enum class QueueSource(val wire: String) {
+    /** Part of a queue you started: an album, playlist, mix, search results. */
+    Picked("picked"),
+
+    /** Play next or Add to queue. */
+    Queued("queued"),
+    Autoplay("autoplay"),
+
+    /** Added by the smart queue. */
+    Smart("smart"),
+
+    /** Back from the saved queue after the app restarted; how it got there is lost. */
+    Restored("restored"),
+
+    /** Chosen in the car (Android Auto). */
+    Car("car"),
+    Unknown("unknown"),
+}
+
+/** How you left a song before it counted as a play. */
+enum class EndReason(val wire: String) { Next("next"), Previous("previous"), Jump("jump"), NewQueue("new_queue"), Stopped("stopped") }
+
+enum class AudioOutput(val wire: String) { Speaker("speaker"), Headphones("headphones"), Bluetooth("bluetooth"), Car("car"), Cast("cast"), Other("other") }
+
+/**
+ * The situation a song played in, sent with each listen so the listening log can train the smart
+ * queue (docs/training-data.md). Taken when the song starts; [endReason] is added for skips.
+ */
+data class ListenContext(
+    val source: QueueSource,
+    /** For [QueueSource.Smart]: what the smart queue did, e.g. "MoreLikeThis". */
+    val smartChange: String? = null,
+    /** album, artist or mixed. */
+    val queueShape: String? = null,
+    val shuffle: Boolean = false,
+    val repeat: RepeatMode = RepeatMode.Off,
+    /** Place in the play order, from 0, and the queue's length. */
+    val queuePosition: Int = 0,
+    val queueLength: Int = 0,
+    val previousTrackId: String? = null,
+    /** play, skip or none (left too soon after a seek to say), for the song before. */
+    val previousOutcome: String? = null,
+    /** Songs started this session before this one, and how many of them were skipped. */
+    val sessionPosition: Int = 0,
+    val sessionSkips: Int = 0,
+    val endReason: EndReason? = null,
+    val output: AudioOutput = AudioOutput.Other,
+    val utcOffsetMinutes: Int = 0,
+    val favorite: Boolean = false,
+    /** Where you were: the device and connection when the song started. */
+    val device: DeviceSnapshot? = null,
+    /** What you did while it played, up to the moment the listen was logged. */
+    val behaviour: ListenBehaviour = ListenBehaviour(),
+    /** How well the smart queue thought the song would fit when it started (its score), to check its guesses later. */
+    val predictedScore: Double? = null,
+)
+
+/** The phone's situation when a song started. Names of Bluetooth devices help tell the car from earbuds. */
+data class DeviceSnapshot(
+    val output: AudioOutput,
+    /** The audio device's name, e.g. a car kit or earbuds; null for the speaker. */
+    val outputName: String? = null,
+    /** wifi, cellular, ethernet or none. */
+    val network: String? = null,
+    val charging: Boolean? = null,
+    val screenOn: Boolean? = null,
+    /** Media volume, 0–1. */
+    val volume: Double? = null,
+)
+
+/** What you did during a song: seeking around, pausing, the volume, liking it. */
+data class ListenBehaviour(
+    /** Where the song started (not 0 when resumed mid-song) and where you left it. */
+    val startPositionMs: Long = 0,
+    val endPositionMs: Long? = null,
+    val seeksForward: Int = 0,
+    val seeksBack: Int = 0,
+    val seekedForwardMs: Long = 0,
+    val seekedBackMs: Long = 0,
+    val pauses: Int = 0,
+    val pausedMs: Long = 0,
+    /** Media volume when the listen was logged, 0–1. */
+    val volumeEnd: Double? = null,
+    /** Favorited (true) or unfavorited (false) while it played; null if neither. */
+    val favoritedDuring: Boolean? = null,
+)
+
+/** Songs favorited or unfavorited, as it happens, so the listening log can note it for the song playing. */
+class FavoriteEvents {
+    private val events = MutableSharedFlow<Pair<String, Boolean>>(extraBufferCapacity = 16)
+    val changes: SharedFlow<Pair<String, Boolean>> = events
+
+    fun changed(trackId: String, favorite: Boolean) {
+        events.tryEmit(trackId to favorite)
+    }
 }
 
 enum class RepeatMode { Off, All, One }

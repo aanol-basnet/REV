@@ -12,6 +12,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import app.rev.domain.model.Track
 import app.rev.domain.playback.PlaybackQueue
+import app.rev.domain.playback.QueueSource
 import app.rev.domain.playback.RepeatMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -102,8 +103,8 @@ class PlaybackController @Inject constructor(
         _state.value = _state.value.copy(queueNote = null, queueNoteAt = 0)
         shuffleModeEnabled = shuffle
         // Shuffled, start from the first song of the new play order so every song gets played.
-        if (shuffle) setMediaItems(tracks.map { it.toItem() }, true)
-        else setMediaItems(tracks.map { it.toItem() }, startIndex.coerceIn(tracks.indices), 0)
+        if (shuffle) setMediaItems(tracks.map { it.toItem(QueueSource.Picked) }, true)
+        else setMediaItems(tracks.map { it.toItem(QueueSource.Picked) }, startIndex.coerceIn(tracks.indices), 0)
         prepare()
         play()
     }
@@ -181,7 +182,7 @@ class PlaybackController @Inject constructor(
         scope.launch { controller.await().block() }
     }
 
-    private fun Track.toItem(): MediaItem = toMediaItem(systemArtworkUri())
+    private fun Track.toItem(source: QueueSource = QueueSource.Queued): MediaItem = toMediaItem(systemArtworkUri(), source)
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = publish(player)

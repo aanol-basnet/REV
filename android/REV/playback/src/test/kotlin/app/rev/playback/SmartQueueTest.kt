@@ -4,6 +4,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.test.core.app.ApplicationProvider
 import app.rev.domain.model.Track
 import app.rev.domain.playback.AutoplayRepository
+import app.rev.domain.playback.QueueSource
 import app.rev.domain.taste.CandidateRequest
 import app.rev.domain.taste.ListeningSession
 import app.rev.domain.taste.Outcome
@@ -54,7 +55,7 @@ class SmartQueueTest {
 
     private fun TestScope.smartQueue(repo: AutoplayRepository) = SmartQueue(
         player, backgroundScope, repo, session, noTaste, TasteRanker(session, noTaste, { 12 }, Random(1)), QueueDirector(),
-        enabled = { true }, toItem = { it.toMediaItem(null) }, onChange = { notes += it },
+        enabled = { true }, toItem = { track, change -> track.toMediaItem(null, QueueSource.Smart, change.name) }, onChange = { notes += it },
     ).also { it.start() }
 
     private fun queueIds() = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }

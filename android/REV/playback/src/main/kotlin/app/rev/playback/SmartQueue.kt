@@ -45,7 +45,7 @@ internal class SmartQueue(
     private val ranker: TasteRanker,
     private val director: QueueDirector,
     private val enabled: () -> Boolean,
-    private val toItem: (Track) -> MediaItem,
+    private val toItem: (Track, QueueChange) -> MediaItem,
     private val onChange: (QueueNote) -> Unit,
 ) : Player.Listener {
     /** Early skips in a row, oldest first. */
@@ -174,7 +174,7 @@ internal class SmartQueue(
                     else -> ranker.rank(found).take(Candidates.QUEUE_SIZE)
                 }
                 if (songs.isEmpty() || !unchanged()) return false
-                replaceUpcoming(songs)
+                replaceUpcoming(songs.map { toItem(it, move.change) })
                 true
             }
         }
@@ -207,10 +207,10 @@ internal class SmartQueue(
     }
 
     /** Swaps everything after the current song for [songs]; added first so the queue never looks finished. */
-    private fun replaceUpcoming(songs: List<Track>) {
+    private fun replaceUpcoming(songs: List<MediaItem>) {
         val upcoming = upcomingIndices()
         val at = player.endOfPlayOrder()
-        player.addMediaItems(at, songs.map(toItem))
+        player.addMediaItems(at, songs)
         upcoming.map { if (it >= at) it + songs.size else it }
             .sortedDescending()
             .forEach(player::removeMediaItem)

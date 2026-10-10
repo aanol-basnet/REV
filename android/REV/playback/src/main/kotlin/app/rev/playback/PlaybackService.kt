@@ -3,6 +3,8 @@ package app.rev.playback
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
+import app.rev.domain.playback.FavoriteEvents
+import app.rev.domain.playback.QueueSource
 import app.rev.domain.taste.ListeningSession
 import app.rev.domain.taste.QueueDirector
 import app.rev.domain.taste.TasteRanker
@@ -83,6 +85,10 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var listeningSession: ListeningSession
     @Inject lateinit var taste: TasteRepository
     @Inject lateinit var ranker: TasteRanker
+    @Inject lateinit var favoriteEvents: FavoriteEvents
+
+    /** Android Auto is connected: listening in the car. */
+    @Volatile private var carConnected = false
     private lateinit var tree: LibraryTree
 
     private val replayGain = ReplayGainAudioProcessor()
@@ -144,11 +150,11 @@ class PlaybackService : MediaLibraryService() {
         audioEffects.attach(player.audioSessionId)
 
         queuePersister = QueuePersister(player, queueStore, scope) { it.systemArtworkUri() }.also { it.start() }
-        AutoplayExtender(player, scope, autoplay, enabled = { settings.autoplay }, toItem = ::queueItem).start()
+        AutoplayExtender(player, scope, autoplay, enabled = { settings.autoplay }, toItem = { queueItem(it, QueueSource.Autoplay) }).start()
         SmartQueue(
             player, scope, autoplay, listeningSession, taste, ranker, QueueDirector(hour = { LocalTime.now().hour }),
             enabled = { settings.smartQueue },
-            toItem = ::queueItem,
+            toItem = { track, change -> queueItem(track, QueueSource.Smart, change.name) },
             onChange = ::publishQueueNote,
         ).start()
         // Have the taste profile ready (and fresh) before the first skip.
@@ -170,7 +176,15 @@ class PlaybackService : MediaLibraryService() {
         // notification, lock screen and app follow whichever is active.
         val sessionPlayer = castCapable(player)
         // Listens are counted on whichever player is active, so casting counts too.
-        playReports = PlayReportTracker(sessionPlayer, reporter, scope).also { it.start() }
+        val deviceState = DeviceState(this, sessionPlayer) { carConnected }
+        playReports = PlayReportTracker(
+            sessionPlayer,
+            reporter,
+            scope,
+            device = deviceState::snapshot,
+            predict = { track -> ranker.scorer().score(track) },
+            favoriteChanges = favoriteEvents.changes,
+        ).also { it.start() }
         scope.launch {
             while (true) {
                 castLinks.refresh()
@@ -300,7 +314,7 @@ class PlaybackService : MediaLibraryService() {
             mediaItems.flatMap { item ->
                 if (LibraryTree.isTreeId(item.mediaId)) {
                     val (tracks, start) = tree.resolve(item.mediaId)
-                    listOfNotNull(tracks.getOrNull(start)?.let(::queueItem))
+                    listOfNotNull(tracks.getOrNull(start)?.let { queueItem(it, QueueSource.Car) })
                 } else {
                     listOf(item.withRevUri())
                 }
@@ -324,8 +338,16 @@ class PlaybackService : MediaLibraryService() {
             }
             return scope.future {
                 val (tracks, start) = tree.resolve(single.mediaId)
-                MediaItemsWithStartPosition(tracks.map(::queueItem), start, C.TIME_UNSET)
+                MediaItemsWithStartPosition(tracks.map { queueItem(it, QueueSource.Car) }, start, C.TIME_UNSET)
             }
+        }
+
+        override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
+            if (controller.packageName in CAR_PACKAGES) carConnected = true
+        }
+
+        override fun onDisconnected(session: MediaSession, controller: MediaSession.ControllerInfo) {
+            if (controller.packageName in CAR_PACKAGES) carConnected = false
         }
 
         override fun onGetLibraryRoot(
@@ -390,8 +412,8 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private fun queueItem(track: Track): MediaItem =
-        track.toMediaItem(track.systemArtworkUri())
+    private fun queueItem(track: Track, source: QueueSource, smartChange: String? = null): MediaItem =
+        track.toMediaItem(track.systemArtworkUri(), source, smartChange)
 
     /**
      * A track that can't load (not downloaded while offline, deleted on the server, ...) is skipped
@@ -419,5 +441,6 @@ class PlaybackService : MediaLibraryService() {
         const val TAG = "PlaybackService"
         const val CAST_TOKEN_CHECK_MS = 30 * 60_000L
         const val WIDGET_FINAL_UPDATE_MS = 1_000L
+        val CAR_PACKAGES = setOf("com.google.android.projection.gearhead", "com.google.android.apps.automotive.media")
     }
 }

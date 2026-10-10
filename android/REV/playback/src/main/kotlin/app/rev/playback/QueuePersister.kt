@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import app.rev.domain.model.Track
 import app.rev.domain.playback.QueueSnapshot
+import app.rev.domain.playback.QueueSource
 import app.rev.domain.playback.QueueStore
 import app.rev.domain.playback.RepeatMode
 import kotlinx.coroutines.CoroutineScope
@@ -106,7 +107,7 @@ internal class QueuePersister(
         return MediaItemsWithStartPosition(saved.items(), saved.currentIndex, saved.positionMs)
     }
 
-    private fun QueueSnapshot.items(): List<MediaItem> = tracks.map { it.toMediaItem(artworkUrl(it)) }
+    private fun QueueSnapshot.items(): List<MediaItem> = tracks.map { it.toMediaItem(artworkUrl(it), QueueSource.Restored) }
 
     private companion object {
         const val DEBOUNCE_MS = 1_000L

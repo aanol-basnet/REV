@@ -1,5 +1,7 @@
 package app.rev.data.playback
 
+import app.rev.data.remote.toDto
+import app.rev.domain.playback.ListenContext
 import app.rev.data.local.offline.OfflineTrackDao
 import app.rev.data.remote.LibraryApi
 import app.rev.data.stats.ListenQueue
@@ -44,11 +46,11 @@ class PlaybackReporterImpl(private val api: LibraryApi, private val listens: Lis
         if (api.scrobble(trackId, submission = false, playedAt = null) is Result.Ok) listens.flush()
     }
 
-    override suspend fun played(trackId: String, startedAt: Long) {
-        listens.add(trackId, startedAt, kind = "play", listenedMs = null)
+    override suspend fun played(trackId: String, startedAt: Long, context: ListenContext?) {
+        listens.add(trackId, startedAt, kind = "play", listenedMs = null, context = context?.toDto())
     }
 
-    override suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long) {
-        listens.add(trackId, startedAt, kind = "skip", listenedMs = listenedMs)
+    override suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext?) {
+        listens.add(trackId, startedAt, kind = "skip", listenedMs = listenedMs, context = context?.toDto())
     }
 }

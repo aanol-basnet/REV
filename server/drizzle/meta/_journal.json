@@ -43,6 +43,13 @@
       "when": 1791623924618,
       "tag": "0005_smart_playlists",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791647957351,
+      "tag": "0006_listen_context",
+      "breakpoints": true
     }
   ]
 }

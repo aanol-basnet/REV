@@ -8,6 +8,68 @@ import { LibraryId, Track } from './library.js';
 export const ListenKind = z.enum(['play', 'skip']);
 export type ListenKind = z.infer<typeof ListenKind>;
 
+/**
+ * The situation a song was played in, recorded by the app so the listening log can train the
+ * smart queue. Every field is optional and open-ended (values are listed, not enforced), so an
+ * older server stores what a newer app sends. See docs/training-data.md.
+ */
+export const ListenContext = z.looseObject({
+  /** Version of this shape. */
+  v: z.number().int().min(1).max(1000),
+  /** How the song got into the queue: picked, queued, autoplay, smart, restored, car, unknown. */
+  source: z.string().max(40).optional(),
+  /** For source "smart": what the smart queue did (MoreLikeThis, OtherArtist, ...). */
+  smartChange: z.string().max(40).nullish(),
+  /** album, artist or mixed. */
+  queueShape: z.string().max(40).optional(),
+  shuffle: z.boolean().optional(),
+  /** off, one or all. */
+  repeat: z.string().max(10).optional(),
+  /** Place in the play order (0-based) and the queue's length. */
+  queuePosition: z.number().int().nonnegative().max(1_000_000).optional(),
+  queueLength: z.number().int().nonnegative().max(1_000_000).optional(),
+  previousTrackId: LibraryId.nullish(),
+  /** How the song before ended: play, skip or none (not long enough to say). */
+  previousOutcome: z.string().max(10).nullish(),
+  /** Songs started this session before this one (a session ends after 30 min without listening). */
+  sessionPosition: z.number().int().nonnegative().max(1_000_000).optional(),
+  sessionSkips: z.number().int().nonnegative().max(1_000_000).optional(),
+  /** For skips, how you left: next, previous, jump, new_queue, stopped. */
+  endReason: z.string().max(20).nullish(),
+  /** speaker, headphones, bluetooth, cast, other. */
+  output: z.string().max(20).optional(),
+  /** The phone's offset from UTC, so local time is known even when travelling. */
+  utcOffsetMinutes: z.number().int().min(-1000).max(1000).optional(),
+  /** A favorite when it played. */
+  favorite: z.boolean().optional(),
+
+  // The phone when the song started.
+  /** The audio device's name (a car kit, earbuds); none for the speaker. */
+  outputName: z.string().max(200).nullish(),
+  /** wifi, cellular, ethernet, other or none. */
+  network: z.string().max(20).nullish(),
+  charging: z.boolean().nullish(),
+  screenOn: z.boolean().nullish(),
+  /** Media volume, 0–1. */
+  volume: z.number().min(0).max(2).nullish(),
+
+  // What you did while it played, up to when the listen was logged.
+  startPositionMs: z.number().int().min(0).optional(),
+  endPositionMs: z.number().int().min(0).nullish(),
+  seeksForward: z.number().int().min(0).optional(),
+  seeksBack: z.number().int().min(0).optional(),
+  seekedForwardMs: z.number().int().min(0).optional(),
+  seekedBackMs: z.number().int().min(0).optional(),
+  pauses: z.number().int().min(0).optional(),
+  pausedMs: z.number().int().min(0).optional(),
+  volumeEnd: z.number().min(0).max(2).nullish(),
+  /** Favorited (true) or unfavorited (false) while it played. */
+  favoritedDuring: z.boolean().nullish(),
+  /** The smart queue's score for the song when it started: its guess, to compare with what you did. */
+  predictedScore: z.number().min(-100).max(100).nullish(),
+});
+export type ListenContext = z.infer<typeof ListenContext>;
+
 export const Listen = z.object({
   trackId: LibraryId,
   /** When the track started playing, epoch ms. Also what makes a listen unique (resends are ignored). */
@@ -15,6 +77,8 @@ export const Listen = z.object({
   kind: ListenKind,
   /** How long it was actually heard. Known for skips; plays count the track's length when absent. */
   listenedMs: z.number().int().nonnegative().max(86_400_000).optional(),
+  /** A context that doesn't validate is dropped; the listen itself is still recorded. */
+  context: ListenContext.optional().catch(undefined),
 });
 export type Listen = z.infer<typeof Listen>;
 

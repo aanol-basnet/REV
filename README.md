@@ -33,6 +33,9 @@ server, and none of those services needs to be exposed to the internet.
 - **Smart queue**: learns from your skips and your listening history (artists, genres, eras, time
   of day) and adapts what's coming up: reshuffles by mood, switches album or artist when you skip
   through one, or follows the song you stop on. Works offline from your downloads.
+- **Your own training data**: every play and skip is logged with its situation (queue, session,
+  device, time) and what you did during it, and can be exported as a dataset
+  ([docs/training-data.md](docs/training-data.md)). It stays on your server.
 - **Offline**: download albums or playlists to the phone; smart downloads keep your favorites and
   recent listening on the device.
 - **Lyrics**: synced lyrics that follow the song, from your files or [LRCLIB](https://lrclib.net),

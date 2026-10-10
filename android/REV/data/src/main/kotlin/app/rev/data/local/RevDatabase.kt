@@ -39,7 +39,7 @@ import app.rev.data.local.stats.PendingListenEntity
         LyricsEntity::class,
         PendingListenEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -52,6 +52,7 @@ import app.rev.data.local.stats.PendingListenEntity
         AutoMigration(from = 8, to = 9),
         AutoMigration(from = 9, to = 10),
         AutoMigration(from = 10, to = 11),
+        AutoMigration(from = 11, to = 12),
     ],
 )
 abstract class RevDatabase : RoomDatabase() {

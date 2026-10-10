@@ -7,6 +7,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import app.rev.domain.model.ReplayGain
 import app.rev.domain.model.Track
+import app.rev.domain.playback.QueueSource
 
 /**
  * Queue items carry a `rev:track/<id>` URI rather than a concrete URL. The actual source (local
@@ -38,6 +39,8 @@ private object Extras {
     const val RG_ALBUM = "rev.rg.albumGain"
     const val RG_TRACK_PEAK = "rev.rg.trackPeak"
     const val RG_ALBUM_PEAK = "rev.rg.albumPeak"
+    const val SOURCE = "rev.source"
+    const val SMART_CHANGE = "rev.smartChange"
 }
 
 /** Artwork size requested for system surfaces (notification, lock screen, car displays). */
@@ -50,9 +53,14 @@ internal const val SYSTEM_ARTWORK_SIZE = 600
  */
 internal fun Track.systemArtworkUri(): String? = coverArtId?.let { ArtworkProvider.uriFor(it).toString() }
 
-/** Builds a queue item. Everything needed to show and persist the track travels in its metadata. */
-fun Track.toMediaItem(artworkUrl: String?): MediaItem {
+/**
+ * Builds a queue item. Everything needed to show and persist the track travels in its metadata,
+ * including how it got into the queue ([source], and [smartChange] for the smart queue's songs).
+ */
+fun Track.toMediaItem(artworkUrl: String?, source: QueueSource = QueueSource.Unknown, smartChange: String? = null): MediaItem {
     val extras = Bundle().apply {
+        putString(Extras.SOURCE, source.wire)
+        smartChange?.let { putString(Extras.SMART_CHANGE, it) }
         albumId?.let { putString(Extras.ALBUM_ID, it) }
         artistId?.let { putString(Extras.ARTIST_ID, it) }
         coverArtId?.let { putString(Extras.COVER_ART_ID, it) }
@@ -126,6 +134,13 @@ fun MediaItem.toTrack(): Track {
             ReplayGain(trackGain, albumGain, doubleOrNull(Extras.RG_TRACK_PEAK), doubleOrNull(Extras.RG_ALBUM_PEAK))
         },
     )
+}
+
+/** How the item got into the queue, and what the smart queue did if it added it. */
+internal fun MediaItem.queueSource(): Pair<QueueSource, String?> {
+    val extras = mediaMetadata.extras ?: return QueueSource.Unknown to null
+    val source = QueueSource.entries.firstOrNull { it.wire == extras.getString(Extras.SOURCE) } ?: QueueSource.Unknown
+    return source to extras.getString(Extras.SMART_CHANGE)
 }
 
 /** Items arriving from a controller lose their URI; give them back the resolvable one. */

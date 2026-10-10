@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ListenBatchResult, ListeningReport, TasteProfile } from '@rev/schemas';
 import { periodBounds } from '../src/stats/report.js';
 import { Zone } from '../src/stats/zone.js';
+import { plays } from '../src/db/schema.js';
 import { createTestApp, signedInHeaders, type TestContext } from './helpers.js';
 import { fakeNavidrome, NAVIDROME, subsonicError, subsonicOk } from './fake-navidrome.js';
 
@@ -119,6 +120,7 @@ describe('listening statistics', () => {
     startedAt: number;
     kind: 'play' | 'skip';
     listenedMs?: number;
+    context?: Record<string, unknown>;
   };
 
   async function send(headers: Record<string, string>, listens: ListenInput[]) {
@@ -423,5 +425,40 @@ describe('listening statistics', () => {
     expect(taste.tracks.find((tr) => tr.id === 's4')).toEqual({ id: 's4', plays: 0, skips: 7 });
     expect(taste.dayparts).toHaveLength(6);
     expect((await t.app.inject({ url: '/api/stats/taste' })).statusCode).toBe(401);
+  });
+
+  it('stores the context a listen was played in, keeping fields it does not know', async () => {
+    const { headers } = await setup();
+    const context = {
+      v: 1,
+      source: 'smart',
+      smartChange: 'MoreLikeThis',
+      queueShape: 'mixed',
+      shuffle: true,
+      endReason: 'next',
+      output: 'a-future-headset',
+      somethingNew: 42,
+    };
+    const res = await send(headers, [
+      { trackId: 's1', startedAt: NOW - HOUR, kind: 'skip', listenedMs: 4_000, context },
+      { trackId: 's2', startedAt: NOW - HOUR + 60_000, kind: 'play' },
+    ] as ListenInput[]);
+    expect(res.statusCode).toBe(200);
+    const stored = t.handle.db
+      .select({ id: plays.trackId, context: plays.context })
+      .from(plays)
+      .all();
+    expect(JSON.parse(stored.find((r) => r.id === 's1')?.context ?? 'null')).toEqual(context);
+    expect(stored.find((r) => r.id === 's2')?.context).toBeNull();
+  });
+
+  it('keeps a listen whose context does not validate, without the context', async () => {
+    const { headers } = await setup();
+    const res = await send(headers, [
+      { trackId: 's1', startedAt: NOW - HOUR, kind: 'play', context: { v: 1, volume: 'loud' } },
+    ]);
+    expect(ListenBatchResult.parse(res.json()).recorded).toBe(1);
+    const stored = t.handle.db.select({ context: plays.context }).from(plays).all();
+    expect(stored[0]?.context).toBeNull();
   });
 });

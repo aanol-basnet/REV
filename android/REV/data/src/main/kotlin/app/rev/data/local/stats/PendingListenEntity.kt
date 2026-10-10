@@ -1,5 +1,6 @@
 package app.rev.data.local.stats
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
@@ -15,6 +16,8 @@ data class PendingListenEntity(
     val kind: String,
     /** How long it was heard; null for a play (the server counts the track's length). */
     val listenedMs: Long?,
+    /** The situation it played in, as the JSON sent to the server (training data). */
+    @ColumnInfo(defaultValue = "NULL") val context: String? = null,
 )
 
 @Dao

@@ -13,7 +13,9 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "user": "tsx src/cli/user.ts",
-    "user:prod": "node dist/cli/user.js"
+    "user:prod": "node dist/cli/user.js",
+    "export-listens": "tsx src/cli/export-listens.ts",
+    "export-listens:prod": "node dist/cli/export-listens.js"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.2.0",

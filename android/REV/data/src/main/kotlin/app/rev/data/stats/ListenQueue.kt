@@ -4,7 +4,9 @@ import androidx.room.withTransaction
 import app.rev.data.local.RevDatabase
 import app.rev.data.local.stats.PendingListenEntity
 import app.rev.data.remote.LibraryApi
+import app.rev.data.remote.ListenContextDto
 import app.rev.data.remote.ListenDto
+import app.rev.data.remote.RevJson
 import app.rev.domain.model.ConnectionState
 import app.rev.domain.model.Result
 import app.rev.domain.repository.LibraryError
@@ -27,8 +29,9 @@ class ListenQueue(
     private val dao = db.pendingListenDao()
     private val sending = Mutex()
 
-    suspend fun add(trackId: String, startedAt: Long, kind: String, listenedMs: Long?) {
-        dao.insert(PendingListenEntity(trackId, startedAt, kind, listenedMs))
+    internal suspend fun add(trackId: String, startedAt: Long, kind: String, listenedMs: Long?, context: ListenContextDto? = null) {
+        val json = context?.let { RevJson.encodeToString(ListenContextDto.serializer(), it) }
+        dao.insert(PendingListenEntity(trackId, startedAt, kind, listenedMs, json))
         flush()
     }
 
@@ -39,7 +42,7 @@ class ListenQueue(
             while (true) {
                 val batch = dao.oldest(BATCH)
                 if (batch.isEmpty()) return
-                val result = api.listens(batch.map { ListenDto(it.trackId, it.startedAt, it.kind, it.listenedMs) })
+                val result = api.listens(batch.map { ListenDto(it.trackId, it.startedAt, it.kind, it.listenedMs, it.contextDto()) })
                 when {
                     result is Result.Ok -> remove(batch)
                     // The server will never take these (e.g. rejected as invalid): don't block the rest.
@@ -58,6 +61,9 @@ class ListenQueue(
             connection.filterIsInstance<ConnectionState.Online>().collect { flush() }
         }
     }
+
+    private fun PendingListenEntity.contextDto(): ListenContextDto? =
+        context?.let { runCatching { RevJson.decodeFromString(ListenContextDto.serializer(), it) }.getOrNull() }
 
     private suspend fun remove(batch: List<PendingListenEntity>) = db.withTransaction {
         batch.forEach { dao.delete(it.trackId, it.startedAt) }

@@ -257,6 +257,11 @@ track + `startedAt`; resends are ignored and not scrobbled twice. Tracks Navidro
 are dropped. Returns `{ recorded, duplicates, unknown }`. If Navidrome can't be reached the
 request fails (502/503) after keeping what it recorded; the app retries later.
 
+Each listen may carry a `context` object: the situation it was played in and what you did while
+it played (training data for the smart queue; fields in [training-data.md](training-data.md)).
+Every field is optional; unknown fields are kept, and a context that doesn't validate is dropped
+without rejecting the listen.
+
 ### `GET /api/stats/report?period=week|month|year|all&offset=0&tz=Europe/Berlin`
 
 `offset` 0 is the current period, 1 the one before. Weeks start on Monday. Days, hours and period

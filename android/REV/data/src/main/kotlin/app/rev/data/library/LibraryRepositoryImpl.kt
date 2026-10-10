@@ -1,5 +1,6 @@
 package app.rev.data.library
 
+import app.rev.domain.playback.FavoriteEvents
 import app.rev.data.local.library.ListKeys
 import app.rev.data.local.library.LibraryDao
 import app.rev.data.local.library.toEntity
@@ -29,6 +30,7 @@ class LibraryRepositoryImpl(
     private val api: LibraryApi,
     private val dao: LibraryDao,
     private val now: () -> Long = System::currentTimeMillis,
+    private val favoriteEvents: FavoriteEvents? = null,
 ) : LibraryRepository {
 
     override fun observeArtists(): Flow<List<Artist>> =
@@ -143,6 +145,7 @@ class LibraryRepositoryImpl(
         setStarredLocally(kind, id, favorite)
         val result = api.setFavorite(kind, id, favorite)
         if (result is Result.Err) setStarredLocally(kind, id, !favorite)
+        if (result is Result.Ok && kind == FavoriteKind.Track) favoriteEvents?.changed(id, favorite)
         return result
     }
 

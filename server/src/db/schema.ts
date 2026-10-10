@@ -126,6 +126,8 @@ export const plays = sqliteTable(
     genres: text('genres').notNull(),
     durationMs: integer('duration_ms').notNull(),
     recordedAt: integer('recorded_at').notNull(),
+    /** JSON `ListenContext` from the app: the situation it was played in; null for older listens. */
+    context: text('context'),
   },
   (t) => [
     uniqueIndex('plays_user_track_started_idx').on(t.userId, t.trackId, t.startedAt),

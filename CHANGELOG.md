@@ -3,6 +3,25 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.5.0 — 2026-10-10
+
+### New
+
+- **Your listening is now recorded in detail**, to train REV's own recommendations. With every
+  play and skip REV notes the situation: how the song got into the queue (you picked it, Play
+  next, autoplay, the smart queue, the car), the queue and shuffle, the song before, how far into
+  your session you were, and how you left it (next, back, jumped, new queue).
+- It also notes where you were listening: speaker, headphones, Bluetooth (with the device's name,
+  so the car and your earbuds are told apart), Android Auto or Cast; Wi-Fi or mobile data;
+  charging; screen on; volume.
+- And what you did while a song played: seeking ahead or back, pausing, liking or unliking it, and
+  how well the smart queue expected it to go.
+- It all stays on your own server. The server can export it as a spreadsheet-ready dataset.
+
+### Changed
+
+- Leaving a song by starting something new now counts as a skip, like pressing next does.
+
 ## 0.4.0 — 2026-10-10
 
 ### New

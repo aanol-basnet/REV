@@ -88,6 +88,7 @@ export class ListeningService {
           genres: JSON.stringify(genres),
           durationMs: track.durationMs,
           recordedAt: this.now(),
+          context: listen.context ? JSON.stringify(listen.context) : null,
         })
         .onConflictDoNothing()
         .run();

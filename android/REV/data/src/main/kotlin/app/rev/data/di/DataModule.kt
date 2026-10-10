@@ -60,6 +60,7 @@ import app.rev.domain.repository.ServerRepository
 import app.rev.domain.model.Result
 import app.rev.domain.model.ServerUrl
 import app.rev.data.stats.TasteRepositoryImpl
+import app.rev.domain.playback.FavoriteEvents
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -265,8 +266,12 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideLibraryRepository(api: LibraryApi, dao: LibraryDao): LibraryRepository =
-        LibraryRepositoryImpl(api, dao)
+    fun provideLibraryRepository(api: LibraryApi, dao: LibraryDao, favoriteEvents: FavoriteEvents): LibraryRepository =
+        LibraryRepositoryImpl(api, dao, favoriteEvents = favoriteEvents)
+
+    @Provides
+    @Singleton
+    fun provideFavoriteEvents(): FavoriteEvents = FavoriteEvents()
 
     @Provides
     @Singleton
