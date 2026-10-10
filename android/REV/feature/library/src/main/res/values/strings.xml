@@ -1,0 +1,106 @@
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_filter_hint">Filter your library</string>
+    <string name="library_filter_clear">Clear filter</string>
+    <string name="library_filter_no_matches">Nothing here matches “%1$s”.</string>
+    <string name="tab_artists">Artists</string>
+    <string name="tab_albums">Albums</string>
+    <string name="tab_tracks">Tracks</string>
+    <string name="tab_playlists">Playlists</string>
+    <string name="tab_genres">Genres</string>
+    <string name="tab_favorites">Favorites</string>
+
+    <string name="empty_artists">No artists in your library yet.</string>
+    <string name="empty_albums">No albums in your library yet.</string>
+    <string name="empty_tracks">No tracks in your library yet.</string>
+    <string name="empty_genres">No genres found.</string>
+    <string name="empty_favorites">Nothing here yet. Tap ♡ on an artist, album or track to add it.</string>
+    <string name="empty_album_tracks">Track list unavailable offline. Connect to your server to load it.</string>
+
+    <string name="favorites_artists">Artists</string>
+    <string name="favorites_albums">Albums</string>
+    <string name="favorites_tracks">Tracks</string>
+
+    <string name="disc_title">Disc %1$d</string>
+    <string name="artist_albums">Albums</string>
+    <string name="artist_eps">EPs</string>
+    <string name="artist_singles">Singles</string>
+    <string name="artist_live">Live</string>
+    <string name="artist_compilations">Compilations</string>
+    <string name="artist_top_songs">Top songs</string>
+    <plurals name="artist_load_more">
+        <item quantity="one">Load more · %d liked or downloaded song</item>
+        <item quantity="other">Load more · %d liked or downloaded songs</item>
+    </plurals>
+    <string name="artist_your_songs">Liked and downloaded</string>
+    <string name="artist_your_songs_empty">You haven\'t liked or downloaded any songs by this artist yet.</string>
+    <string name="artist_songs_unavailable">Couldn\'t load songs right now.</string>
+    <string name="artist_songs_none">No songs found.</string>
+
+    <string name="track_details">Track details</string>
+    <string name="detail_album">Album</string>
+    <string name="detail_artist">Artist</string>
+    <string name="detail_track">Track</string>
+    <string name="detail_disc">Disc</string>
+    <string name="detail_year">Year</string>
+    <string name="detail_genre">Genre</string>
+    <string name="detail_duration">Duration</string>
+    <string name="detail_format">Format</string>
+    <string name="detail_bitrate">Bit rate</string>
+    <string name="detail_sample_rate">Sample rate</string>
+    <string name="detail_bit_depth">Bit depth</string>
+    <string name="detail_size">File size</string>
+    <string name="go_to_album">Go to album</string>
+    <string name="go_to_artist">Go to artist</string>
+    <string name="load_more_failed">Couldn\'t load more.</string>
+    <string name="action_play">Play</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_queue">Queue</string>
+    <string name="action_play_next">Play next</string>
+    <string name="action_add_to_queue">Add to queue</string>
+    <string name="queued_next">Playing next</string>
+    <string name="queued_added">Added to queue</string>
+    <string name="empty_playlists">No playlists yet. Make one with New playlist, or use Add to playlist on any song or album.</string>
+    <string name="empty_playlist_tracks">Track list unavailable offline. Connect to your server to load it.</string>
+    <string name="action_download_track">Download</string>
+    <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_name">Name</string>
+    <string name="playlist_description">Description</string>
+    <string name="playlist_create">Create</string>
+    <string name="playlist_cancel">Cancel</string>
+    <string name="playlist_save">Save</string>
+    <string name="playlist_edit">Edit playlist</string>
+    <string name="playlist_edit_hint">Drag to reorder, × to remove. Changes are saved when you tap Save.</string>
+    <string name="playlist_edit_empty">No songs. Add some with Add to playlist from any song or album.</string>
+    <string name="playlist_empty">No songs yet. Use Add to playlist on any song or album.</string>
+    <string name="playlist_reorder">Drag to reorder</string>
+    <string name="playlist_remove_song">Remove %1$s</string>
+    <string name="playlist_discard_title">Discard your changes?</string>
+    <string name="playlist_discard">Discard</string>
+    <string name="playlist_keep_editing">Keep editing</string>
+    <string name="playlist_delete_action">Delete playlist</string>
+    <string name="playlist_delete_title">Delete “%1$s”?</string>
+    <string name="playlist_delete_text">It\'s removed from your music server too. Your songs stay in the library.</string>
+    <string name="playlist_delete">Delete</string>
+    <string name="playlist_read_only_owner">Made by %1$s in Navidrome. Only they can change it.</string>
+    <string name="playlist_read_only">Shared from Navidrome. It can\'t be changed from REV.</string>
+    <string name="playlist_pick_read_only_owner">Read-only · made by %1$s in Navidrome</string>
+    <string name="playlist_pick_read_only">Read-only · update the REV server to edit</string>
+    <string name="playlist_duplicate">Duplicate</string>
+    <string name="playlist_duplicate_editable">Make an editable copy</string>
+    <string name="playlist_created">Created “%1$s”</string>
+    <string name="playlist_already_in">Already in “%1$s”</string>
+    <plurals name="playlist_added">
+        <item quantity="one">Added to “%2$s”</item>
+        <item quantity="other">Added %1$d songs to “%2$s”</item>
+    </plurals>
+    <plurals name="playlist_added_some">
+        <item quantity="one">Added %1$d song to “%2$s” (%3$d already there)</item>
+        <item quantity="other">Added %1$d songs to “%2$s” (%3$d already there)</item>
+    </plurals>
+    <plurals name="playlist_add_title">
+        <item quantity="one">Add to playlist</item>
+        <item quantity="other">Add %d songs to playlist</item>
+    </plurals>
+</resources>

@@ -1,0 +1,146 @@
+<resources>
+    <string name="stats_title">Your listening</string>
+    <string name="stats_open">Your listening</string>
+    <string name="stats_period_week">Week</string>
+    <string name="stats_period_month">Month</string>
+    <string name="stats_period_year">Year</string>
+    <string name="stats_period_all">All time</string>
+    <string name="stats_this_week">This week</string>
+    <string name="stats_last_week">Last week</string>
+    <string name="stats_this_month">This month</string>
+    <string name="stats_this_year">This year</string>
+    <string name="stats_since">Since %1$s</string>
+    <string name="stats_earlier">Earlier period</string>
+    <string name="stats_later">Later period</string>
+    <string name="stats_showing_saved">Showing your last saved report. %1$s</string>
+
+    <string name="stats_empty_new">REV keeps your listening history from now on. Play some music and your report fills in here.</string>
+    <string name="stats_empty_period">Nothing played in this period.</string>
+
+    <string name="stats_listening_time">Listening time</string>
+    <string name="stats_plays">Plays</string>
+    <string name="stats_vs_previous">%1$s vs the period before</string>
+    <string name="stats_more">▲ %1$s</string>
+    <string name="stats_less">▼ %1$s</string>
+
+    <string name="stats_tracks">Songs</string>
+    <string name="stats_artists">Artists</string>
+    <string name="stats_albums">Albums</string>
+    <string name="stats_genres">Genres</string>
+    <string name="stats_active_days">Days listening</string>
+    <string name="stats_daily_average">Daily average</string>
+    <string name="stats_skip_rate">Skipped</string>
+    <string name="stats_longest_streak">Longest streak</string>
+    <string name="stats_current_streak">Current streak</string>
+    <string name="stats_longest_session">Longest session</string>
+    <string name="stats_variety">Variety</string>
+    <string name="stats_new_songs">New to you</string>
+    <plurals name="stats_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="stats_play_count">
+        <item quantity="one">%d play</item>
+        <item quantity="other">%d plays</item>
+    </plurals>
+    <plurals name="stats_skip_count">
+        <item quantity="one">%d skip</item>
+        <item quantity="other">%d skips</item>
+    </plurals>
+    <string name="stats_variety_value">%1$d / 100</string>
+    <string name="stats_of_days">%1$d of %2$d</string>
+
+    <string name="stats_highlights">Highlights</string>
+    <string name="stats_top_genres">Top genres</string>
+    <string name="stats_top_artists">Top artists</string>
+    <string name="stats_top_albums">Top albums</string>
+    <string name="stats_top_tracks">Top songs</string>
+    <string name="stats_on_repeat">On repeat</string>
+    <string name="stats_on_repeat_detail">%1$d× on %2$s · %3$s</string>
+    <string name="stats_over_time">Over time</string>
+    <string name="stats_genre_by_month">Your genre of each month</string>
+    <string name="stats_when">When you listen</string>
+    <string name="stats_peak">Busiest: %1$s around %2$s</string>
+    <string name="stats_discoveries">Discoveries</string>
+    <string name="stats_discoveries_detail">%1$s, %2$s you hadn\'t heard — %3$s of your plays.</string>
+    <plurals name="stats_new_artists">
+        <item quantity="one">%d new artist</item>
+        <item quantity="other">%d new artists</item>
+    </plurals>
+    <plurals name="stats_new_song_count">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+    <string name="stats_most_skipped">Most skipped</string>
+    <string name="stats_skipped_detail">%1$s · played %2$d</string>
+    <string name="stats_show_all">Show all</string>
+    <string name="stats_show_less">Show less</string>
+    <string name="stats_new">NEW</string>
+    <string name="stats_tracking_since">REV has been keeping your history since %1$s.</string>
+    <string name="stats_tap_bar">Tap a bar for details</string>
+    <string name="stats_point_detail">%1$s · %2$s · %3$s</string>
+    <string name="stats_point_top">Top: %1$s</string>
+    <string name="stats_cell_detail">%1$s, %2$s · %3$s</string>
+    <string name="stats_share">%1$s of plays</string>
+
+    <!-- Smart playlists -->
+    <string name="smart_title">Made from your listening</string>
+    <string name="smart_on_repeat">On repeat</string>
+    <string name="smart_on_repeat_detail">Your most played, last 30 days</string>
+    <string name="smart_forgotten">Forgotten favorites</string>
+    <string name="smart_forgotten_detail">Played a lot, but not lately</string>
+    <string name="smart_year">Top songs of %1$d</string>
+    <string name="smart_year_detail">Your most played that year</string>
+    <string name="smart_play_description">Play %1$s</string>
+    <string name="smart_play">Play</string>
+    <string name="smart_shuffle">Shuffle</string>
+    <string name="smart_save">Save to Navidrome</string>
+    <string name="smart_update">Update in Navidrome</string>
+    <string name="smart_save_detail">Saved as an ordinary playlist, so it shows up in every Subsonic app. Saving again updates it.</string>
+    <string name="smart_open_saved">Open playlist</string>
+    <string name="smart_saved">Saved to your playlists</string>
+    <string name="smart_updated">Playlist updated</string>
+    <plurals name="smart_track_count">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+
+    <!-- Year in review -->
+    <string name="review_cta">Your %1$s in review</string>
+    <string name="review_cta_detail">Your year in music, a page at a time</string>
+    <string name="review_title">%1$d in review</string>
+    <string name="review_close">Close</string>
+    <string name="review_empty">Nothing played in %1$d.</string>
+    <string name="review_intro_kicker">In %1$d, you listened for</string>
+    <string name="review_intro_detail">of music</string>
+    <string name="review_intro_numbers">%1$s, %2$s, music on %3$s</string>
+    <plurals name="review_artist_count">
+        <item quantity="one">%d artist</item>
+        <item quantity="other">%d artists</item>
+    </plurals>
+    <string name="review_persona_kicker">Your listening style</string>
+    <string name="review_top_song_kicker">Your song of the year</string>
+    <plurals name="review_played_times">
+        <item quantity="one">Played once</item>
+        <item quantity="other">Played %d times</item>
+    </plurals>
+    <string name="review_top_artists_kicker">Your top artists</string>
+    <string name="review_top_albums_kicker">Your top albums</string>
+    <string name="review_top_genres_kicker">What you were into</string>
+    <string name="review_rhythm_kicker">When you listened</string>
+    <string name="review_peak_month">was your biggest month: %1$s</string>
+    <string name="review_peak_time">Your busiest time: %1$s around %2$s</string>
+    <string name="review_streak">Longest streak: %1$s in a row</string>
+    <string name="review_longest_session">Longest session: %1$s</string>
+    <string name="review_discoveries_kicker">You found</string>
+    <plurals name="review_new_artists">
+        <item quantity="one">new artist</item>
+        <item quantity="other">new artists</item>
+    </plurals>
+    <string name="review_top_discovery">%1$s led the way</string>
+    <string name="review_new_song_share">%1$s of your plays were songs new to you</string>
+    <string name="review_outro_kicker">Your top songs of %1$d</string>
+    <string name="review_play_top">Play your top songs</string>
+    <string name="review_save_top">Save to Navidrome</string>
+    <string name="review_open_saved">Open the playlist</string>
+</resources>

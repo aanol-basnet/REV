@@ -1,0 +1,13 @@
+<resources>
+    <string name="auto_recently_played">Recently played</string>
+    <string name="auto_recently_added">Recently added</string>
+    <string name="auto_playlists">Playlists</string>
+    <string name="auto_downloaded">Downloaded</string>
+    <string name="auto_favorites">Favorites</string>
+    <string name="widget_description">What\'s playing, with its cover and controls. Resize it for a bigger card.</string>
+    <string name="widget_previous">Previous track</string>
+    <string name="widget_open">Tap to open REV</string>
+    <string name="widget_nothing_playing">Nothing playing</string>
+    <string name="widget_play_pause">Play or pause</string>
+    <string name="widget_next">Next track</string>
+</resources>

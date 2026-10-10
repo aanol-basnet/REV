@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REV servers are self-hosted and usually reached at a Tailscale address (http://100.x.y.z:port).
+  Tailscale encrypts that traffic with WireGuard, so cleartext HTTP is permitted. The app warns when
+  plain HTTP would go to a host outside Tailscale or a private network.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config
+        cleartextTrafficPermitted="true"
+        tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

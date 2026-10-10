@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A record: outer groove ring and a centre label, within the 66dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFF5F5F7"
+        android:strokeWidth="3"
+        android:pathData="M54,30a24,24 0 1,0 0.01,0z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#668E8E93"
+        android:strokeWidth="1.5"
+        android:pathData="M54,38a16,16 0 1,0 0.01,0z" />
+    <path
+        android:fillColor="#FFF5F5F7"
+        android:pathData="M54,48a6,6 0 1,0 0.01,0z" />
+</vector>

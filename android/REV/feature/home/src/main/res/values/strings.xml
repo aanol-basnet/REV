@@ -1,0 +1,29 @@
+<resources>
+    <string name="greeting_morning">Good morning.</string>
+    <string name="greeting_afternoon">Good afternoon.</string>
+    <string name="greeting_evening">Good evening.</string>
+    <string name="greeting_night">Up late.</string>
+    <string name="home_retry">Try again</string>
+    <string name="home_your_listening">Your listening</string>
+    <string name="home_mixes">Made for you</string>
+    <string name="home_offline_mixes">From your downloads</string>
+    <string name="home_offline_mixes_hint">Your server can\'t be reached. These play from music on this device.</string>
+    <string name="home_mix_offline_fallback">Server unreachable. Playing this mix from your downloads.</string>
+    <string name="home_on_repeat">On repeat</string>
+    <string name="home_because">Because you listen to %1$s</string>
+    <string name="home_more_genre">More %1$s</string>
+    <string name="home_rediscover">Rediscover</string>
+    <string name="home_rediscover_hint">Albums you played a lot, but not lately.</string>
+    <string name="home_unheard">Not heard yet</string>
+    <string name="home_unheard_hint">In your library, never played, picked for your taste.</string>
+    <string name="home_your_genres">Your genres</string>
+    <string name="home_see_all">See all</string>
+    <string name="home_open_artist">Artist</string>
+    <string name="home_recently_played">Jump back in</string>
+    <string name="home_recently_added">Recently added</string>
+    <string name="home_search">Search music</string>
+    <plurals name="home_downloading">
+        <item quantity="one">%d album downloading</item>
+        <item quantity="other">%d albums downloading</item>
+    </plurals>
+</resources>

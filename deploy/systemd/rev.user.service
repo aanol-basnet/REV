@@ -1,0 +1,14 @@
+[Unit]
+Description=REV music server
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/REV/server
+ExecStart=/usr/bin/node dist/main.js
+# The Tailscale address may appear after boot; keep retrying until it can bind.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

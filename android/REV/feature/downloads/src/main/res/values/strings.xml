@@ -1,0 +1,41 @@
+<resources>
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_in_progress">Getting albums</string>
+    <string name="downloads_finished">Finished</string>
+    <string name="downloads_clear">Clear</string>
+    <plurals name="offline_tracks_progress">
+        <item quantity="one">%1$d of %2$d track</item>
+        <item quantity="other">%1$d of %2$d tracks</item>
+    </plurals>
+    <plurals name="offline_failed_tracks">
+        <item quantity="one">%1$d track couldn\'t be downloaded</item>
+        <item quantity="other">%1$d tracks couldn\'t be downloaded</item>
+    </plurals>
+    <string name="downloads_empty">Nothing downloaded yet. Use the download button on an album, playlist or song to listen without a connection.</string>
+    <plurals name="downloads_song_count">
+        <item quantity="one">%d song on this device</item>
+        <item quantity="other">%d songs on this device</item>
+    </plurals>
+    <plurals name="downloads_artist_songs">
+        <item quantity="one">%d song downloaded</item>
+        <item quantity="other">%d songs downloaded</item>
+    </plurals>
+    <string name="downloads_storage">%1$s used · %2$s free</string>
+    <string name="downloads_play">Play</string>
+    <string name="downloads_shuffle">Shuffle</string>
+    <string name="downloads_mixes">Offline mixes</string>
+    <string name="downloads_view_collections">Albums &amp; playlists</string>
+    <string name="downloads_view_songs">Songs</string>
+    <string name="downloads_view_artists">Artists</string>
+    <string name="downloads_no_collections">Albums and playlists you download appear here.</string>
+    <string name="downloads_no_songs">No songs downloaded yet.</string>
+    <string name="downloads_play_next">Play next</string>
+    <string name="downloads_add_to_queue">Add to queue</string>
+    <string name="downloads_go_to_album">Go to album</string>
+    <string name="downloads_go_to_artist">Go to artist</string>
+    <string name="downloads_cancel">Cancel</string>
+    <string name="downloads_retry">Retry</string>
+    <string name="downloads_open">Open</string>
+    <string name="downloads_live_off">Live updates paused. Pull to refresh.</string>
+    <string name="offline_automatic">Smart download</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">REV</string>
+    <string name="phone">Phone</string>
+    <string name="phone_idle">Nothing playing on your phone</string>
+    <string name="on_watch">On this watch</string>
+    <string name="on_watch_empty">No music on this watch yet</string>
+    <string name="add_from_phone">Add from phone</string>
+    <string name="phone_albums">Downloaded on phone</string>
+    <string name="phone_albums_loading">Asking your phone…</string>
+    <string name="phone_albums_empty">Download albums in REV on your phone first</string>
+    <string name="phone_unreachable">Phone not reachable</string>
+    <string name="copying">Copying %1$d of %2$d</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="delete">Remove from watch</string>
+    <string name="needs_headphones">Connect Bluetooth headphones to listen</string>
+</resources>

@@ -1,0 +1,27 @@
+<resources>
+    <string name="player_collapse">Close player</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_next">Next track</string>
+    <string name="player_previous">Previous track</string>
+    <string name="player_shuffle_on">Shuffle on</string>
+    <string name="player_shuffle_off">Shuffle off</string>
+    <string name="player_repeat_off">Repeat off</string>
+    <string name="player_repeat_all">Repeat all</string>
+    <string name="player_repeat_one">Repeat one</string>
+    <string name="player_open_queue">Queue</string>
+    <string name="player_now_playing">Now playing</string>
+    <string name="player_nothing">Nothing is playing.</string>
+
+    <string name="queue_title">Queue</string>
+    <string name="queue_clear">Clear</string>
+    <string name="queue_save_as_playlist">Save</string>
+    <string name="player_add_to_playlist">Add to playlist</string>
+    <string name="queue_empty">Your queue is empty.</string>
+    <string name="queue_reorder">Drag to reorder</string>
+    <string name="queue_up_next">Up next</string>
+    <string name="player_lyrics">Lyrics</string>
+    <string name="player_go_to_artist">Go to artist</string>
+    <string name="player_go_to_album">Go to album</string>
+    <string name="player_open">Open player</string>
+</resources>

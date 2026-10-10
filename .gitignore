@@ -1,0 +1,32 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# REV server data
+server/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+*.keystore
+*.jks
+
+# OS / editors
+.DS_Store
+.vscode/

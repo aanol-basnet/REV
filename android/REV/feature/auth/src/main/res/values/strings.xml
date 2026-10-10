@@ -1,0 +1,33 @@
+<resources>
+    <string name="auth_tagline">Your music. Your server.</string>
+
+    <string name="server_setup_title">Connect to your server</string>
+    <string name="server_setup_body">Enter the address of your REV server that works from anywhere, for example https://rev.example.com or its Tailscale IP.</string>
+    <string name="server_setup_local_label">Home network address (optional)</string>
+    <string name="server_setup_local_placeholder">192.168.1.10:4600</string>
+    <string name="server_setup_local_hint">Used automatically at home, so music skips the internet.</string>
+    <string name="server_setup_error_local_invalid">The home network address doesn\'t look valid.</string>
+    <string name="server_setup_error_local_not_local">Use an address on your home network (such as 192.168.x.x) for the home address.</string>
+    <string name="server_setup_error_local_different">A different REV server answers at the home network address.</string>
+    <string name="server_setup_url_label">Server address</string>
+    <string name="server_setup_url_placeholder">100.x.y.z:4600</string>
+    <string name="server_setup_connect">Connect</string>
+    <string name="server_setup_error_empty">Enter your server\'s address.</string>
+    <string name="server_setup_error_invalid">That doesn\'t look like a valid address.</string>
+    <string name="server_setup_error_scheme">Only http:// and https:// addresses are supported.</string>
+    <string name="server_setup_error_unreachable">Couldn\'t reach that address. Check that the server is running and that your phone can reach it.</string>
+    <string name="server_setup_error_not_rev">Something answered, but it isn\'t a REV server. Check the port.</string>
+    <string name="server_setup_insecure_warning">This connection is not encrypted. Use HTTPS, or connect over Tailscale or your home network.</string>
+
+    <string name="login_title">Sign in</string>
+    <string name="login_server">Server: %1$s</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
+    <string name="login_submit">Sign in</string>
+    <string name="login_change_server">Change server</string>
+    <string name="login_error_credentials">Incorrect username or password.</string>
+    <string name="login_error_rate_limited">Too many attempts. Wait a minute and try again.</string>
+    <string name="login_error_unreachable">Can\'t reach your server right now.</string>
+    <string name="login_error_no_server">No server is configured.</string>
+    <string name="login_error_unexpected">Sign-in failed: %1$s</string>
+</resources>
