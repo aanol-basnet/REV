@@ -26,6 +26,30 @@ export const FeedbackBatchResult = z.object({
 });
 export type FeedbackBatchResult = z.infer<typeof FeedbackBatchResult>;
 
+/**
+ * Something you did with a song besides listening: playlist_add, play_next, queue_add,
+ * queue_remove (taken out of the queue before it played), favorite, unfavorite, repeat_one or
+ * lyrics. Open-ended, so an older server stores kinds a newer app sends.
+ */
+export const InteractionEvent = z.object({
+  kind: z.string().min(1).max(40),
+  trackId: LibraryId,
+  /** When, epoch ms. With the kind and song, what makes it unique (resends are ignored). */
+  at: z.number().int().positive(),
+});
+export type InteractionEvent = z.infer<typeof InteractionEvent>;
+
+export const InteractionBatch = z.object({ events: z.array(InteractionEvent).min(1).max(500) });
+export type InteractionBatch = z.infer<typeof InteractionBatch>;
+
+export const InteractionBatchResult = z.object({
+  recorded: z.number().int().nonnegative(),
+  duplicates: z.number().int().nonnegative(),
+  /** Dropped because the song is no longer in the library. */
+  unknown: z.number().int().nonnegative(),
+});
+export type InteractionBatchResult = z.infer<typeof InteractionBatchResult>;
+
 /** How the model did on the most recent listens, which it wasn't trained on. */
 export const ModelMetrics = z.object({
   /** Listens it was tested on. */
@@ -43,6 +67,24 @@ export const ModelMetrics = z.object({
 });
 export type ModelMetrics = z.infer<typeof ModelMetrics>;
 
+/** How a model was trained; picked by trying several on recent listens and keeping the best. */
+export const TrainingSettings = z.object({
+  learningRate: z.number().positive(),
+  l2: z.number().nonnegative(),
+  epochs: z.number().int().positive(),
+});
+export type TrainingSettings = z.infer<typeof TrainingSettings>;
+
+/** One training run, kept so you can see whether the model is getting better. */
+export const TrainingRun = z.object({
+  trainedAt: z.number().int(),
+  examples: z.number().int().nonnegative(),
+  logLoss: z.number().nullable(),
+  baselineLogLoss: z.number().nullable(),
+  auc: z.number().nullable(),
+});
+export type TrainingRun = z.infer<typeof TrainingRun>;
+
 /**
  * Logistic regression over named features (docs/training-data.md): the chance of skipping a song
  * is sigmoid(bias + the weights of its features).
@@ -57,6 +99,9 @@ export const SkipModel = z.object({
   bias: z.number(),
   weights: z.record(z.string(), z.number()),
   metrics: ModelMetrics.nullable(),
+  settings: TrainingSettings.nullable().default(null),
+  /** Earlier training runs and this one, oldest first (up to 50). */
+  history: z.array(TrainingRun).default([]),
 });
 export type SkipModel = z.infer<typeof SkipModel>;
 

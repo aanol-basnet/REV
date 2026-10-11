@@ -1,4 +1,4 @@
-import type { ModelMetrics, SkipModel } from '@rev/schemas';
+import type { ModelMetrics, SkipModel, TrainingRun, TrainingSettings } from '@rev/schemas';
 
 /** One listen to learn from. */
 export interface Example {
@@ -15,9 +15,12 @@ export interface Example {
 }
 
 export interface TrainOptions {
-  epochs?: number;
-  learningRate?: number;
-  l2?: number;
+  /** Fixed settings; when left out, they're tuned (see [tuneSettings]). */
+  settings?: TrainingSettings;
+  /** The last model's settings, always among those tried. */
+  previous?: TrainingSettings | null;
+  /** Earlier training runs, carried forward. */
+  history?: TrainingRun[];
   /** Share of the newest listens held back to test on. */
   holdout?: number;
   random?: () => number;
@@ -26,6 +29,14 @@ export interface TrainOptions {
 
 /** Fewer listens than this say too little to train on. */
 export const MIN_EXAMPLES = 50;
+export const DEFAULT_SETTINGS: TrainingSettings = { learningRate: 0.15, l2: 1e-5, epochs: 6 };
+/** Settings tried when tuning: how fast it learns, how hard it resists single songs, how long. */
+const TUNING_GRID: TrainingSettings[] = [0.05, 0.15, 0.4].flatMap((learningRate) =>
+  [1e-5, 1e-4, 1e-3].flatMap((l2) => [4, 8].map((epochs) => ({ learningRate, l2, epochs }))),
+);
+/** Listens needed before tuning: enough to set some aside to judge the settings on. */
+const MIN_TUNING = 100;
+const MAX_HISTORY = 50;
 const MIN_HOLDOUT = 20;
 const MAX_FEATURES = 40_000;
 const MIN_WEIGHT = 0.005;
@@ -36,9 +47,10 @@ interface Fit {
 }
 
 /**
- * Trains the skip model: logistic regression with AdaGrad and a little L2. First on the older
- * listens, tested on the newest ones (the way it'll be used: predicting what comes next), then on
- * everything for the model that's served.
+ * Trains the skip model: logistic regression with AdaGrad and L2. The settings are tuned on the
+ * older listens (each candidate trained on the oldest part, judged on the part after it); the
+ * chosen ones are tested on the newest listens (the way it'll be used: predicting what comes
+ * next), then the served model is trained on everything.
  */
 export function trainSkipModel(examples: Example[], options: TrainOptions = {}): SkipModel | null {
   if (examples.length < MIN_EXAMPLES) return null;
@@ -46,22 +58,66 @@ export function trainSkipModel(examples: Example[], options: TrainOptions = {}):
   const holdoutSize = Math.floor(sorted.length * (options.holdout ?? 0.2));
   const train = sorted.slice(0, sorted.length - holdoutSize);
   const test = sorted.slice(sorted.length - holdoutSize);
+  const settings =
+    options.settings ?? tuneSettings(train, options.previous ?? null, options.random);
+  const fitOptions = { ...settings, random: options.random };
 
-  const metrics = test.length >= MIN_HOLDOUT ? evaluate(fit(train, options), train, test) : null;
-  const final = fit(sorted, options);
+  const metrics = test.length >= MIN_HOLDOUT ? evaluate(fit(train, fitOptions), train, test) : null;
+  const final = fit(sorted, fitOptions);
+  const trainedAt = options.now ?? Date.now();
   const kept = [...final.weights]
     .filter(([, w]) => Math.abs(w) >= MIN_WEIGHT)
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
     .slice(0, MAX_FEATURES);
+  const run: TrainingRun = {
+    trainedAt,
+    examples: sorted.length,
+    logLoss: metrics?.logLoss ?? null,
+    baselineLogLoss: metrics?.baselineLogLoss ?? null,
+    auc: metrics?.auc ?? null,
+  };
   return {
     version: 1,
-    trainedAt: options.now ?? Date.now(),
+    trainedAt,
     dataUntil: sorted[sorted.length - 1]?.startedAt ?? 0,
     examples: sorted.length,
     bias: round(final.bias),
     weights: Object.fromEntries(kept.map(([f, w]) => [f, round(w)])),
     metrics,
+    settings,
+    history: [...(options.history ?? []), run].slice(-MAX_HISTORY),
   };
+}
+
+/**
+ * The settings that predict best: each candidate (and the last model's) is trained on the oldest
+ * four-fifths of [train] and judged by its log loss on the rest; ties keep the earlier candidate,
+ * so the last settings stay unless something does better. Too few listens: the last settings.
+ */
+export function tuneSettings(
+  train: Example[],
+  previous: TrainingSettings | null,
+  random?: () => number,
+): TrainingSettings {
+  const start = previous ?? DEFAULT_SETTINGS;
+  const validationSize = Math.floor(train.length * 0.2);
+  if (train.length < MIN_TUNING || validationSize < MIN_HOLDOUT) return start;
+  const inner = train.slice(0, train.length - validationSize);
+  const validation = train.slice(train.length - validationSize);
+  let best = start;
+  let bestLoss = Infinity;
+  for (const candidate of [start, ...TUNING_GRID]) {
+    const model = fit(inner, { ...candidate, random });
+    const loss = logLoss(
+      validation,
+      validation.map((e) => predict(model, e.features)),
+    );
+    if (loss < bestLoss - 1e-9) {
+      best = candidate;
+      bestLoss = loss;
+    }
+  }
+  return best;
 }
 
 export function predict(
@@ -73,16 +129,19 @@ export function predict(
   return sigmoid(model.bias + features.reduce((sum, f) => sum + get(f), 0));
 }
 
-function fit(examples: Example[], options: TrainOptions): Fit {
-  const lr = options.learningRate ?? 0.15;
-  const l2 = options.l2 ?? 1e-5;
+function fit(
+  examples: Example[],
+  options: TrainingSettings & { random?: (() => number) | undefined },
+): Fit {
+  const lr = options.learningRate;
+  const l2 = options.l2;
   const random = options.random ?? Math.random;
   const weights = new Map<string, number>();
   const squares = new Map<string, number>();
   let bias = 0;
   let biasSquares = 0;
   const order = examples.map((_, i) => i);
-  for (let epoch = 0; epoch < (options.epochs ?? 6); epoch++) {
+  for (let epoch = 0; epoch < options.epochs; epoch++) {
     shuffleInPlace(order, random);
     for (const i of order) {
       const ex = examples[i] as Example;

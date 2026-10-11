@@ -15,6 +15,8 @@ import {
   SmartPlaylists,
   TasteProfile,
   TasteQuery,
+  InteractionBatch,
+  InteractionBatchResult,
 } from '@rev/schemas';
 import { authOf, requireAuth } from '../auth/middleware.js';
 import type { AuthService } from '../auth/service.js';
@@ -60,6 +62,14 @@ export function statsRoutes(
   app.get('/api/stats/report', { preHandler }, async (req) => {
     const query = parseInput(ReportQuery, req.query);
     return ListeningReport.parse(service().report(authOf(req).userId, query));
+  });
+
+  // Other things done with songs: added to a playlist, queued, favorited...
+  app.post('/api/stats/interactions', { preHandler }, async (req) => {
+    const { events } = parseInput(InteractionBatch, req.body);
+    return InteractionBatchResult.parse(
+      await service().recordInteractions(authOf(req).userId, events),
+    );
   });
 
   // Feedback buttons in the player, about one listen.

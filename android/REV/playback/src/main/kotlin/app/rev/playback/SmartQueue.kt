@@ -6,6 +6,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import app.rev.domain.learning.ListenOutcome
 import app.rev.domain.model.Track
 import app.rev.domain.playback.AutoplayRepository
 import app.rev.domain.taste.CandidateRequest
@@ -47,6 +48,12 @@ internal class SmartQueue(
     private val enabled: () -> Boolean,
     private val toItem: (Track, QueueChange) -> MediaItem,
     private val onChange: (QueueNote) -> Unit,
+    /**
+     * How the song being left reads, given where it was left: an interruption (left while paused
+     * to talk, after a call) or browsing (while adding songs to a playlist) says nothing about the
+     * mood. Null when unknown; the position alone decides then.
+     */
+    private val outcomeOf: (Long) -> ListenOutcome? = { null },
 ) : Player.Listener {
     /** Early skips in a row, oldest first. */
     private val streak = mutableListOf<Track>()
@@ -113,9 +120,21 @@ internal class SmartQueue(
     }
 
     private fun left(track: Track, positionMs: Long) {
+        val read = if (notNow || stayed) null else runCatching { outcomeOf(positionMs) }.getOrNull()
+        when (read) {
+            // Not about the song or the mood: leave the session and the run of skips alone.
+            ListenOutcome.Browsing -> return
+            // You were away: a run of skips before it doesn't carry on after it.
+            ListenOutcome.Interrupted -> return endStreak()
+            else -> Unit
+        }
         val outcome = when {
             notNow -> Outcome.NotNow
             stayed -> null
+            read == ListenOutcome.Rejected -> Outcome.QuickSkip
+            read == ListenOutcome.Bored -> Outcome.LateSkip
+            read == ListenOutcome.Saved || read == ListenOutcome.Replayed -> Outcome.Stayed
+            read != null -> Outcome.Played
             isQuickSkip(track.durationMs, positionMs) -> Outcome.QuickSkip
             track.durationMs > 0 && positionMs < track.durationMs / 2 -> Outcome.LateSkip
             else -> Outcome.Played

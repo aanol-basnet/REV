@@ -271,6 +271,19 @@ it played (training data for the smart queue; fields in [training-data.md](train
 Every field is optional; unknown fields are kept, and a context that doesn't validate is dropped
 without rejecting the listen.
 
+A play is sent when it counts and again when the song ends, with an `outcome` in its context
+(`completed`, `outro`, `saved`...; see [training-data.md](training-data.md#outcomes)): a resend
+with an outcome replaces the stored context and `listenedMs` instead of being ignored, and isn't
+scrobbled again.
+
+### `POST /api/stats/interactions`
+
+`{ events: [{ kind, trackId, at }] }` (1–500): things done with songs besides listening:
+`playlist_add`, `play_next`, `queue_add`, `queue_remove`, `favorite`, `unfavorite`, `repeat_one`,
+`lyrics` (other kinds are stored too). Stored with the song's artist and genres; feed the taste
+profile. Resends (same kind, song and time) are ignored. Returns `{ recorded, duplicates, unknown }`;
+fails like listens when Navidrome can't be reached.
+
 ### `GET /api/stats/report?period=week|month|year|all&offset=0&tz=Europe/Berlin`
 
 `offset` 0 is the current period, 1 the one before. Weeks start on Monday. Days, hours and period
@@ -299,7 +312,9 @@ boundaries follow `tz` (IANA, default UTC). The report (`ListeningReport` in
 - `GET /api/stats/model`: `{ model }`, the latest personal skip model or null:
   `{ version: 1, trainedAt, dataUntil, examples, bias, weights: { feature: weight }, metrics }`,
   where `metrics` (null with too few listens) is `{ holdout, logLoss, baselineLogLoss, auc,
-smartQueueAuc, phoneModelAuc }` from testing on the newest listens. See
+smartQueueAuc, phoneModelAuc }` from testing on the newest listens, `settings` (`{ learningRate,
+l2, epochs }`) the tuned settings it was trained with, and `history` its training runs (`{
+trainedAt, examples, logLoss, baselineLogLoss, auc }`, oldest first, up to 50). See
   [training-data.md](training-data.md).
 - `POST /api/stats/model/train`: trains now and returns `{ model }` (null below 50 listens).
 

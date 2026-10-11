@@ -14,7 +14,9 @@ import app.rev.domain.modes.ModeRepository
 import app.rev.domain.modes.ModeSituation
 import app.rev.domain.playback.DeviceSnapshot
 import kotlinx.coroutines.flow.first
+import app.rev.domain.playback.EndReason
 import app.rev.domain.learning.CurrentSituation
+import app.rev.domain.learning.InteractionLog
 import app.rev.domain.learning.ListenFeatures
 import app.rev.domain.learning.PersonalModel
 import app.rev.domain.learning.Situation
@@ -108,6 +110,7 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var modeRepository: ModeRepository
     @Inject lateinit var modeChoices: ModeChoiceStore
     @Inject lateinit var currentMode: CurrentMode
+    @Inject lateinit var interactions: InteractionLog
     private val modeKeeper = ModeKeeper()
     private lateinit var deviceState: DeviceState
     private lateinit var smartQueue: SmartQueue
@@ -182,6 +185,8 @@ class PlaybackService : MediaLibraryService() {
             enabled = { settings.smartQueue },
             toItem = { track, change -> queueItem(track, QueueSource.Smart, change.name) },
             onChange = ::publishQueueNote,
+            // The song being left, read with its pauses and playlist adds (set up below).
+            outcomeOf = { positionMs -> playReports.outcomeIfLeft(positionMs, EndReason.Next) },
         ).also { it.start() }
         // Have the taste profile and personal model ready (and fresh) before the first skip.
         scope.launch {
@@ -216,7 +221,8 @@ class PlaybackService : MediaLibraryService() {
             predictSkip = { track, context -> personalModel.skipChance(ListenFeatures.of(track, context, System.currentTimeMillis(), taste.profile())) },
             modeAtStart = ::modeAtSongStart,
             onStart = { situation.value = Situation.of(it) },
-            onListen = { track, context, startedAt, skipped -> learn(track, context, startedAt, skipped, weight = 1.0) },
+            onListen = { track, context, startedAt, outcome -> learn(track, context, startedAt, outcome.skipped, outcome.weight) },
+            interactions = interactions,
             favoriteChanges = favoriteEvents.changes,
         ).also { it.start() }
         scope.launch {
@@ -411,8 +417,12 @@ class PlaybackService : MediaLibraryService() {
             }
         }
         mediaSession?.run {
-            // Last chance to remember where we were; the write is small and local.
-            runBlocking { queuePersister.saveNow() }
+            // Last chance to remember where we were, and how the song playing ended; both writes
+            // are small and local (sending waits for later if it takes too long).
+            runBlocking {
+                queuePersister.saveNow()
+                withTimeoutOrNull(FINAL_REPORT_MS) { playReports.stop()?.join() }
+            }
             crossfader.release()
             audioEffects.release()
             player.release()
@@ -590,6 +600,7 @@ class PlaybackService : MediaLibraryService() {
         const val TAG = "PlaybackService"
         const val CAST_TOKEN_CHECK_MS = 30 * 60_000L
         const val WIDGET_FINAL_UPDATE_MS = 1_000L
+        const val FINAL_REPORT_MS = 1_000L
         const val FEEDBACK_WEIGHT = 2.0
         val CAR_PACKAGES = setOf("com.google.android.projection.gearhead", "com.google.android.apps.automotive.media")
     }

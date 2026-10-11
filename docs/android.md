@@ -146,6 +146,24 @@ is connected), what you did during the song (seeks, pauses, favoriting via `Favo
 the smart queue's score. It waits in `pending_listens.context` (JSON) until the server has it.
 The fields and the export are described in [training-data.md](training-data.md).
 
+When a song ends, the tracker reads how it went (`ListenOutcomes.classify`): rejected, bored,
+outro skip, completed, saved, replayed, or nothing about the song: interrupted (left while paused,
+or just after a long pause or one the phone made, such as a call (`PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS`),
+losing audio focus or unplugged headphones), browsing (quick skips while adding songs to
+playlists) or going back. A play is sent once it counts and again when it ends, with its outcome
+(`pending_listens` upsert); the service waits up to a second for that when it's destroyed. The
+personal model learns from the outcome's label and weight, and the smart queue asks the tracker
+(`outcomeIfLeft`) before reading a skip, so browsing doesn't steer the queue and an interruption
+ends a run of skips.
+
+### Interactions
+
+`InteractionLog` (`InteractionLogImpl`) records what you do with songs besides listening: playlist
+adds (`PlaylistRepositoryImpl`), Play next / Add to queue / removing an upcoming song / repeat one
+(`PlaybackController`), favorites (`FavoriteEvents`) and opening lyrics (`LyricsViewModel`).
+Recent ones stay in memory for reading listens (`addedToPlaylist`, `curating`); all of them wait
+in `pending_interactions` and go to `POST /api/stats/interactions` with the listens.
+
 ### Listening modes
 
 What you're doing while you listen: Driving solo, Driving with family (leans to familiar songs),
@@ -180,7 +198,7 @@ model with double weight.
 The personal model (`PersonalModelImpl`, `OnlineSkipModel`, `SkipFeatures`) predicts the chance
 of a skip from the song, the current `Situation` (output, network, charging, queue, session) and
 your history. It starts from the server's model (`skip_model.json`) and learns from every listen
-as `PlayReportTracker` logs it, offline too; examples are kept in `learned_examples` and replayed
+as it ends (weighted by its outcome; interruptions and browsing are left out), offline too; examples are kept in `learned_examples` and replayed
 on top of each newer server model. `TasteRanker` adds its say to the smart queue's and
 autoplay's ranking, weighted by how much it has learned. Each listen logs the hand-tuned score
 and the model's chance, so the server can compare them.

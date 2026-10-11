@@ -495,6 +495,77 @@ describe('listening statistics', () => {
     expect((await t.app.inject({ url: '/api/mixes/time:brunch', headers })).statusCode).toBe(400);
   });
 
+  it('reads how listens went: interruptions say nothing, endings update plays, interactions count', async () => {
+    const { headers, nav } = await setup();
+    const day = NOW - 2 * DAY;
+    const skip = (trackId: string, startedAt: number, outcome: string) => ({
+      trackId,
+      startedAt,
+      kind: 'skip' as const,
+      listenedMs: 5_000,
+      context: { v: 1, outcome },
+    });
+    // Bjork skipped three times, but each time while paused to talk to someone.
+    await send(
+      headers,
+      [0, 1, 2].map((i) => skip('s4', day + i * HOUR, 'interrupted')),
+    );
+    // Deftones skipped three times for real.
+    await send(
+      headers,
+      [0, 1, 2].map((i) => skip('s3', day + i * HOUR + 60_000, 'rejected')),
+    );
+    let taste = TasteProfile.parse(
+      (await t.app.inject({ url: '/api/stats/taste?tz=UTC', headers })).json(),
+    );
+    const artist = (name: string) => taste.artists.find((a) => a.id === `ar-${name}`)?.score;
+    expect(artist('Bjork')).toBeUndefined();
+    expect(artist('Deftones')).toBeLessThan(0);
+    expect(taste.tracks.find((tr) => tr.id === 's4')).toBeUndefined();
+
+    // A play counts when sent, then is sent again with how it ended: one listen, one scrobble.
+    const scrobbles = () => nav.calls.filter((c) => c.endpoint === 'scrobble').length;
+    const before = scrobbles();
+    await send(headers, [{ trackId: 's1', startedAt: day + 5 * HOUR, kind: 'play' }]);
+    const ended = await send(headers, [
+      {
+        trackId: 's1',
+        startedAt: day + 5 * HOUR,
+        kind: 'play',
+        listenedMs: 150_000,
+        context: { v: 1, outcome: 'outro', endReason: 'next', endPositionMs: 150_000 },
+      },
+    ]);
+    expect(ListenBatchResult.parse(ended.json()).duplicates).toBe(1);
+    expect(scrobbles() - before).toBe(1);
+    const row = t.handle.db
+      .select()
+      .from(plays)
+      .all()
+      .find((r) => r.trackId === 's1');
+    expect(row?.listenedMs).toBe(150_000);
+    expect(JSON.parse(row?.context ?? '{}')).toMatchObject({ outcome: 'outro' });
+
+    // Adding Bjork to a playlist and favoriting her say you like her.
+    const added = await t.app.inject({
+      method: 'POST',
+      url: '/api/stats/interactions',
+      headers,
+      payload: {
+        events: [
+          { kind: 'playlist_add', trackId: 's4', at: day + 6 * HOUR },
+          { kind: 'favorite', trackId: 's4', at: day + 6 * HOUR + 1 },
+          { kind: 'playlist_add', trackId: 'gone', at: day + 6 * HOUR },
+        ],
+      },
+    });
+    expect(added.json()).toEqual({ recorded: 2, duplicates: 0, unknown: 1 });
+    taste = TasteProfile.parse(
+      (await t.app.inject({ url: '/api/stats/taste?tz=UTC', headers })).json(),
+    );
+    expect(artist('Bjork')).toBeGreaterThan(0.5);
+  });
+
   it('stores the context a listen was played in, keeping fields it does not know', async () => {
     const { headers } = await setup();
     const context = {

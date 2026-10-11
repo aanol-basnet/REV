@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { FeedbackBatchResult, SkipModelResponse } from '@rev/schemas';
 import { type FeatureInput, features } from '../src/model/features.js';
-import { auc, type Example, predict, trainSkipModel } from '../src/model/train.js';
+import {
+  auc,
+  DEFAULT_SETTINGS,
+  type Example,
+  predict,
+  trainSkipModel,
+  tuneSettings,
+} from '../src/model/train.js';
 import { seeded } from '../src/home/service.js';
 import { createTestApp, signedInHeaders, type TestContext } from './helpers.js';
 import { fakeNavidrome, NAVIDROME, subsonicOk } from './fake-navidrome.js';
@@ -78,6 +85,26 @@ describe('skip model training', () => {
     expect(model.metrics?.smartQueueAuc).toBe(0.5);
     expect(model.dataUntil).toBe(599);
     expect(model.trainedAt).toBe(5);
+  });
+
+  it('tunes its settings on recent listens, keeps them unless others do better, and keeps a history', () => {
+    const data = examples(600);
+    const first = trainSkipModel(data, { random: seeded(2), now: 1 });
+    expect(first?.settings).toBeTruthy();
+    // Tuning never does worse on unseen listens than the defaults it started from.
+    const fixed = trainSkipModel(data, { random: seeded(2), now: 1, settings: DEFAULT_SETTINGS });
+    expect(first?.metrics?.logLoss).toBeLessThanOrEqual((fixed?.metrics?.logLoss ?? 0) + 0.02);
+    const second = trainSkipModel(data, {
+      random: seeded(2),
+      now: 2,
+      previous: first?.settings ?? null,
+      history: first?.history ?? [],
+    });
+    expect(second?.history.map((h) => h.trainedAt)).toEqual([1, 2]);
+    expect(second?.history[1]?.logLoss).toBe(second?.metrics?.logLoss);
+    // Too few listens to set some aside: the last settings stay.
+    const few = { learningRate: 0.4, l2: 1e-3, epochs: 4 };
+    expect(tuneSettings(data.slice(0, 60), few)).toEqual(few);
   });
 
   it('waits for enough listens', () => {

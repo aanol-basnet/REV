@@ -25,6 +25,10 @@ interface PendingListenDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(listen: PendingListenEntity)
 
+    /** A play sent again when it ends: replaces the waiting one, if it hasn't gone yet. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(listen: PendingListenEntity)
+
     @Query("SELECT * FROM pending_listens ORDER BY startedAt LIMIT :limit")
     suspend fun oldest(limit: Int): List<PendingListenEntity>
 

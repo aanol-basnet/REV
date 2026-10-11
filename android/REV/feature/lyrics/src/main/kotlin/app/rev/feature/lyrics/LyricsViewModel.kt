@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import app.rev.domain.model.Lyrics
 import app.rev.domain.model.LyricsSync
 import app.rev.domain.model.Result
+import app.rev.domain.learning.InteractionKind
+import app.rev.domain.learning.InteractionLog
 import app.rev.domain.model.Track
 import app.rev.domain.repository.LibraryError
 import app.rev.domain.repository.LyricsRepository
@@ -41,6 +43,8 @@ sealed interface LyricsUiState {
 class LyricsViewModel @Inject constructor(
     private val playback: PlaybackController,
     private val lyrics: LyricsRepository,
+    /** Following a song's lyrics is a sign you're into it. */
+    private val interactions: InteractionLog,
 ) : ViewModel() {
 
     /** Bumped to reload after a failure. */
@@ -70,6 +74,7 @@ class LyricsViewModel @Inject constructor(
     }
 
     private fun load(track: Track): Flow<LyricsUiState> = flow {
+        interactions.record(InteractionKind.Lyrics, listOf(track.id))
         emit(LyricsUiState.Loading)
         emit(
             when (val result = lyrics.lyrics(track.id)) {

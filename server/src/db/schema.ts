@@ -178,3 +178,29 @@ export const skipModels = sqliteTable('skip_models', {
   model: text('model').notNull(),
   trainedAt: integer('trained_at').notNull(),
 });
+
+/**
+ * Things done with songs besides listening (adding to a playlist, queueing, favoriting...), with
+ * the song's artist and genres as they were then, for the taste profile.
+ */
+export const interactions = sqliteTable(
+  'interactions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    trackId: text('track_id').notNull(),
+    at: integer('at').notNull(),
+    artistId: text('artist_id'),
+    artist: text('artist').notNull(),
+    /** JSON array of genre names. */
+    genres: text('genres').notNull(),
+    recordedAt: integer('recorded_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('interactions_user_kind_track_at_idx').on(t.userId, t.kind, t.trackId, t.at),
+    index('interactions_user_at_idx').on(t.userId, t.at),
+  ],
+);

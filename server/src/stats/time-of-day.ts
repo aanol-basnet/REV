@@ -1,12 +1,11 @@
 import type { TimeOfDay } from '@rev/schemas';
 import type { PlayRow } from './report.js';
+import { OUTCOME_SIGNAL, outcomeOf } from './outcomes.js';
 import { lift, round } from './taste.js';
 import { DAY_MS, type Zone } from './zone.js';
 
 /** Recent listens count more: a listen's weight halves every this many days. */
 const HALF_LIFE_DAYS = 60;
-/** A skip after this long says less about the song. */
-const EARLY_SKIP_MS = 30_000;
 /** Plays a part of the day needs before it says anything. */
 const MIN_PLAYS = 8;
 /** Plays an artist or genre needs within a part of the day before its lift counts. */
@@ -78,8 +77,12 @@ export function timesOfDay(rows: PlayRow[], zone: Zone, now: number): TimeTaste[
   for (const row of rows) {
     const part = parts.get(timeOfDay(zone.hour(row.startedAt)));
     if (!part) continue;
-    const weight = 0.5 ** (Math.max(0, now - row.startedAt) / DAY_MS / HALF_LIFE_DAYS);
-    const played = row.kind === 'play';
+    const signal = OUTCOME_SIGNAL[row.outcome ?? outcomeOf({ ...row, context: null })];
+    // Interrupted or browsing: says nothing about the song.
+    if (signal.label === null) continue;
+    const weight =
+      0.5 ** (Math.max(0, now - row.startedAt) / DAY_MS / HALF_LIFE_DAYS) * signal.weight;
+    const played = signal.label === 0;
     let song = part.songs.get(row.trackId);
     if (!song) {
       song = { net: 0, plays: 0, artist: row.artist, coverArtId: row.coverArtId };
@@ -102,7 +105,7 @@ export function timesOfDay(rows: PlayRow[], zone: Zone, now: number): TimeTaste[
         bump(overall.artists, row.artistId);
       }
     } else {
-      song.net -= weight * (row.listenedMs < EARLY_SKIP_MS ? 1 : 0.5);
+      song.net -= weight;
     }
   }
 

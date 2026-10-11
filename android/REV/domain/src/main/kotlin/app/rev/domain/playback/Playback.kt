@@ -1,5 +1,6 @@
 package app.rev.domain.playback
 
+import app.rev.domain.learning.ListenOutcome
 import app.rev.domain.model.Track
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -50,6 +51,12 @@ interface PlaybackReporter {
     suspend fun nowPlaying(trackId: String)
     suspend fun played(trackId: String, startedAt: Long, context: ListenContext? = null)
 
+    /**
+     * A play that has ended, with how it went ([ListenContext.outcome]): sent again after
+     * [played], which reported it as soon as it counted.
+     */
+    suspend fun ended(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext?) = Unit
+
     /** Moved on to another track after [listenedMs], before it counted as a play. */
     suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext? = null)
 
@@ -85,13 +92,15 @@ enum class QueueSource(val wire: String) {
 }
 
 /** How you left a song before it counted as a play. */
-enum class EndReason(val wire: String) { Next("next"), Previous("previous"), Jump("jump"), NewQueue("new_queue"), Stopped("stopped") }
+/** How a song was left; [Ended]: it played to the end. */
+enum class EndReason(val wire: String) { Next("next"), Previous("previous"), Jump("jump"), NewQueue("new_queue"), Stopped("stopped"), Ended("ended") }
 
 enum class AudioOutput(val wire: String) { Speaker("speaker"), Headphones("headphones"), Bluetooth("bluetooth"), Car("car"), Cast("cast"), Other("other") }
 
 /**
  * The situation a song played in, sent with each listen so the listening log can train the smart
- * queue (docs/training-data.md). Taken when the song starts; [endReason] is added for skips.
+ * queue (docs/training-data.md). Taken when the song starts; how it ended ([endReason], [outcome])
+ * is added when it ends.
  */
 data class ListenContext(
     val source: QueueSource,
@@ -126,6 +135,10 @@ data class ListenContext(
     val mode: String? = null,
     val modeName: String? = null,
     val modeSource: String? = null,
+    /** How the listen went, once the song ends (see ListenOutcomes). */
+    val outcome: ListenOutcome? = null,
+    /** How the song began: previous, next, jump, auto, repeat or new_queue. */
+    val arrivedBy: String? = null,
 )
 
 /** The phone's situation when a song started. Names of Bluetooth devices help tell the car from earbuds. */
@@ -156,6 +169,17 @@ data class ListenBehaviour(
     val volumeEnd: Double? = null,
     /** Favorited (true) or unfavorited (false) while it played; null if neither. */
     val favoritedDuring: Boolean? = null,
+    /** Paused at the moment you left it. */
+    val pausedAtEnd: Boolean? = null,
+    /** The most recent pause's length (any kind), and what was heard after it ended. */
+    val lastPauseMs: Long? = null,
+    val heardSinceResumeMs: Long? = null,
+    /** That pause was the phone's doing: a call, unplugged headphones, another app's sound. */
+    val systemPause: Boolean? = null,
+    /** Added to a playlist while it played. */
+    val addedToPlaylist: Boolean? = null,
+    /** Songs were being added to a playlist lately. */
+    val curating: Boolean? = null,
 )
 
 /** Songs favorited or unfavorited, as it happens, so the listening log can note it for the song playing. */

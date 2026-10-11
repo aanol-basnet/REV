@@ -2,6 +2,7 @@ package app.rev.playback
 
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.test.core.app.ApplicationProvider
+import app.rev.domain.learning.ListenOutcome
 import app.rev.domain.model.Track
 import app.rev.domain.playback.AutoplayRepository
 import app.rev.domain.playback.QueueSource
@@ -53,9 +54,10 @@ class SmartQueueTest {
 
     private val noTaste = TasteRepository { TasteProfile() }
 
-    private fun TestScope.smartQueue(repo: AutoplayRepository) = SmartQueue(
+    private fun TestScope.smartQueue(repo: AutoplayRepository, outcomeOf: (Long) -> ListenOutcome? = { null }) = SmartQueue(
         player, backgroundScope, repo, session, noTaste, TasteRanker(session, noTaste, { 12 }, Random(1)), QueueDirector(),
         enabled = { true }, toItem = { track, change -> track.toMediaItem(null, QueueSource.Smart, change.name) }, onChange = { notes += it },
+        outcomeOf = outcomeOf,
     ).also { it.start() }
 
     private fun queueIds() = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
@@ -96,6 +98,23 @@ class SmartQueueTest {
             listOf(Outcome.QuickSkip, Outcome.QuickSkip, Outcome.QuickSkip, Outcome.Stayed),
             session.signals().map { it.outcome },
         )
+    }
+
+    @Test
+    fun `skips while browsing for a playlist or after an interruption don't change the queue`() = runTest {
+        var reading: ListenOutcome? = ListenOutcome.Browsing
+        smartQueue(Fake(listOf(track("x"))), outcomeOf = { reading })
+        player.setMediaItems(listOf("a", "b", "c", "d", "e", "f", "g").map { track(it).toMediaItem(null) })
+        skip(3)
+        assertEquals(emptyList<QueueNote>(), notes)
+        assertEquals(emptyList<Outcome>(), session.signals().map { it.outcome })
+        // Two real rejections, then an interruption: the run of skips starts over.
+        reading = ListenOutcome.Rejected
+        skip(2)
+        reading = ListenOutcome.Interrupted
+        skip(1)
+        assertEquals(emptyList<QueueNote>(), notes)
+        assertEquals(listOf(Outcome.QuickSkip, Outcome.QuickSkip), session.signals().map { it.outcome })
     }
 
     @Test

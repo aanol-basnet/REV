@@ -40,9 +40,15 @@ export class ModelService {
     return { recorded, duplicates: events.length - recorded };
   }
 
-  /** The user's listening log as training examples, oldest first. */
+  /**
+   * The user's listening log as training examples, oldest first; listens that say nothing about
+   * the song (interrupted, browsing, going back) are left out unless a feedback button spoke.
+   */
   examples(userId: number): Example[] {
-    return this.dataset(userId).map(exampleFrom);
+    return this.dataset(userId).flatMap((r) => {
+      const example = exampleFrom(r);
+      return example ? [example] : [];
+    });
   }
 
   dataset(userId: number): DatasetRecord[] {
@@ -71,7 +77,13 @@ export class ModelService {
 
   /** Trains and stores a new model; null while there's too little to learn from. */
   train(userId: number): SkipModel | null {
-    const model = trainSkipModel(this.examples(userId), { now: this.now() });
+    // Carry the last model's settings and history forward: it tunes from there and keeps a record.
+    const last = this.latest(userId);
+    const model = trainSkipModel(this.examples(userId), {
+      now: this.now(),
+      previous: last?.settings ?? null,
+      history: last?.history ?? [],
+    });
     if (!model) return null;
     const json = JSON.stringify(model);
     this.db
@@ -140,15 +152,21 @@ export function featureInput(r: DatasetRecord): FeatureInput {
   };
 }
 
-/** Feedback buttons override what happened and count double. */
-export function exampleFrom(r: DatasetRecord): Example {
+/**
+ * What a listen teaches: its outcome's label and weight (a rejection counts fully, getting bored
+ * late half, a save one and a half); feedback buttons override it and count double. Null when it
+ * teaches nothing.
+ */
+export function exampleFrom(r: DatasetRecord): Example | null {
   const given = r.feedback;
-  const label =
-    given === 'not_now' ? 1 : given === 'more_like_this' ? 0 : r.skipped === true ? 1 : 0;
+  const asked = given === 'not_now' ? 1 : given === 'more_like_this' ? 0 : null;
+  const fromOutcome = r.label === 0 || r.label === 1 ? r.label : null;
+  const label = asked ?? fromOutcome;
+  if (label === null) return null;
   return {
     features: features(featureInput(r)),
     label,
-    weight: given === 'not_now' || given === 'more_like_this' ? 2 : 1,
+    weight: asked !== null ? 2 : typeof r.label_weight === 'number' ? r.label_weight : 1,
     startedAt: Number(r.started_at_ms),
     predictedScore: typeof r.predicted_score === 'number' ? r.predicted_score : null,
     predictedSkip: typeof r.predicted_skip === 'number' ? r.predicted_skip : null,

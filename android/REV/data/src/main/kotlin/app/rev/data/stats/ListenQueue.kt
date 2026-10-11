@@ -5,6 +5,9 @@ import app.rev.data.local.RevDatabase
 import app.rev.data.local.stats.PendingListenEntity
 import app.rev.data.remote.LibraryApi
 import app.rev.data.local.stats.PendingFeedbackEntity
+import app.rev.data.local.stats.PendingInteractionEntity
+import app.rev.data.remote.InteractionDto
+import app.rev.domain.learning.Interaction
 import app.rev.data.remote.FeedbackEventDto
 import app.rev.data.remote.ListenContextDto
 import app.rev.data.remote.ListenDto
@@ -20,9 +23,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Plays and skips wait here until the server has them, so listening offline (downloads, a dead
- * zone, the server down) still ends up in your history. Sent oldest first, in batches; the server
- * ignores resends, so a lost response is harmless.
+ * Plays and skips, then feedback and other interactions, wait here until the server has them, so
+ * listening offline (downloads, a dead zone, the server down) still ends up in your history. Sent
+ * oldest first, in batches; the server ignores resends, so a lost response is harmless.
  */
 class ListenQueue(
     private val db: RevDatabase,
@@ -30,6 +33,7 @@ class ListenQueue(
 ) {
     private val dao = db.pendingListenDao()
     private val feedbackDao = db.pendingFeedbackDao()
+    private val interactionDao = db.pendingInteractionDao()
     private val sending = Mutex()
 
     internal suspend fun add(trackId: String, startedAt: Long, kind: String, listenedMs: Long?, context: ListenContextDto? = null) {
@@ -38,8 +42,20 @@ class ListenQueue(
         flush()
     }
 
+    /** A play again, now that it has ended: the server updates the one it has. */
+    internal suspend fun update(trackId: String, startedAt: Long, kind: String, listenedMs: Long?, context: ListenContextDto?) {
+        val json = context?.let { RevJson.encodeToString(ListenContextDto.serializer(), it) }
+        dao.upsert(PendingListenEntity(trackId, startedAt, kind, listenedMs, json))
+        flush()
+    }
+
     suspend fun addFeedback(trackId: String, listenStartedAt: Long, kind: String, at: Long, positionMs: Long?) {
         feedbackDao.insert(PendingFeedbackEntity(trackId, listenStartedAt, kind, at, positionMs))
+        flush()
+    }
+
+    suspend fun addInteractions(events: List<Interaction>) {
+        interactionDao.insert(events.map { PendingInteractionEntity(it.kind.wire, it.trackId, it.at) })
         flush()
     }
 
@@ -50,7 +66,7 @@ class ListenQueue(
             // Listens first: feedback is about them.
             while (true) {
                 val batch = dao.oldest(BATCH)
-                if (batch.isEmpty()) return
+                if (batch.isEmpty()) break
                 val result = api.listens(batch.map { ListenDto(it.trackId, it.startedAt, it.kind, it.listenedMs, it.contextDto()) })
                 when {
                     result is Result.Ok -> remove(batch)
@@ -61,11 +77,22 @@ class ListenQueue(
             }
             while (true) {
                 val batch = feedbackDao.oldest(BATCH)
-                if (batch.isEmpty()) return
+                if (batch.isEmpty()) break
                 val result = api.feedback(batch.map { FeedbackEventDto(it.trackId, it.listenStartedAt, it.kind, it.at, it.positionMs) })
                 when {
                     result is Result.Ok || (result is Result.Err && result.error is LibraryError.Unexpected) -> db.withTransaction {
                         batch.forEach { feedbackDao.delete(it.trackId, it.listenStartedAt, it.kind) }
+                    }
+                    else -> return
+                }
+            }
+            while (true) {
+                val batch = interactionDao.oldest(BATCH)
+                if (batch.isEmpty()) return
+                val result = api.interactions(batch.map { InteractionDto(it.kind, it.trackId, it.at) })
+                when {
+                    result is Result.Ok || (result is Result.Err && result.error is LibraryError.Unexpected) -> db.withTransaction {
+                        batch.forEach { interactionDao.delete(it.kind, it.trackId, it.at) }
                     }
                     else -> return
                 }

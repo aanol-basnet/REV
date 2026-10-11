@@ -1,4 +1,5 @@
 import type { ListenContext } from '@rev/schemas';
+import { OUTCOME_SIGNAL, outcomeOf } from './outcomes.js';
 import type { Zone } from './zone.js';
 
 /** A row of the listening log as stored, context still JSON. */
@@ -65,6 +66,8 @@ export function buildDataset(
         : localAt(ms + offset * 60_000);
     const when = local(row.startedAt);
     const skipped = row.kind === 'skip';
+    const outcome = outcomeOf({ ...row, context });
+    const signal = OUTCOME_SIGNAL[outcome];
     const artistKey = row.artistId ?? row.artist.toLowerCase();
 
     out.push({
@@ -89,6 +92,9 @@ export function buildDataset(
       kind: row.kind,
       skipped,
       early_skip: skipped && row.listenedMs < EARLY_SKIP_MS,
+      outcome,
+      label: signal.label,
+      label_weight: signal.weight,
       session_id: session,
       session_position: sessionPosition,
       session_skips_before: sessionSkips,
@@ -133,19 +139,25 @@ export function buildDataset(
       predicted_skip: context?.predictedSkip ?? null,
       previous_outcome: context?.previousOutcome ?? null,
       session_skips: context?.sessionSkips ?? null,
+      arrived_by: context?.arrivedBy ?? null,
+      paused_at_end: context?.pausedAtEnd ?? null,
+      last_pause_ms: context?.lastPauseMs ?? null,
+      heard_since_resume_ms: context?.heardSinceResumeMs ?? null,
+      system_pause: context?.systemPause ?? null,
+      added_to_playlist: context?.addedToPlaylist ?? null,
+      curating: context?.curating ?? null,
       feedback: feedback.get(listenKey(row.trackId, row.startedAt)) ?? null,
     });
 
-    (skipped ? trackSkips : trackPlays).set(
-      row.trackId,
-      ((skipped ? trackSkips : trackPlays).get(row.trackId) ?? 0) + 1,
-    );
-    (skipped ? artistSkips : artistPlays).set(
-      artistKey,
-      ((skipped ? artistSkips : artistPlays).get(artistKey) ?? 0) + 1,
-    );
+    // Counted the way the app counts them: interruptions and browsing are neither.
+    if (signal.label !== null) {
+      const tracks = signal.label === 1 ? trackSkips : trackPlays;
+      const artists = signal.label === 1 ? artistSkips : artistPlays;
+      tracks.set(row.trackId, (tracks.get(row.trackId) ?? 0) + 1);
+      artists.set(artistKey, (artists.get(artistKey) ?? 0) + 1);
+    }
     sessionPosition += 1;
-    if (skipped) sessionSkips += 1;
+    if (signal.label === 1) sessionSkips += 1;
     previous = row;
   }
   return out;

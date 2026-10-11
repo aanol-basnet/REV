@@ -87,6 +87,16 @@ internal data class ListenContextDto(
     val mode: String?,
     val modeName: String?,
     val modeSource: String?,
+    // Added later: defaults so listens queued by an older version still read back. Null values
+    // aren't sent, which the server takes as unknown.
+    val outcome: String? = null,
+    val arrivedBy: String? = null,
+    val pausedAtEnd: Boolean? = null,
+    val lastPauseMs: Long? = null,
+    val heardSinceResumeMs: Long? = null,
+    val systemPause: Boolean? = null,
+    val addedToPlaylist: Boolean? = null,
+    val curating: Boolean? = null,
 )
 
 internal fun ListenContext.toDto() = ListenContextDto(
@@ -126,6 +136,14 @@ internal fun ListenContext.toDto() = ListenContextDto(
     mode = mode,
     modeName = modeName,
     modeSource = modeSource,
+    outcome = outcome?.wire,
+    arrivedBy = arrivedBy,
+    pausedAtEnd = behaviour.pausedAtEnd,
+    lastPauseMs = behaviour.lastPauseMs,
+    heardSinceResumeMs = behaviour.heardSinceResumeMs,
+    systemPause = behaviour.systemPause,
+    addedToPlaylist = behaviour.addedToPlaylist,
+    curating = behaviour.curating,
 )
 
 @Serializable
@@ -133,6 +151,12 @@ internal data class FeedbackEventDto(val trackId: String, val listenStartedAt: L
 
 @Serializable
 internal data class FeedbackBatchDto(val events: List<FeedbackEventDto>)
+
+@Serializable
+internal data class InteractionDto(val kind: String, val trackId: String, val at: Long)
+
+@Serializable
+internal data class InteractionBatchDto(val events: List<InteractionDto>)
 
 @Serializable
 internal data class SkipModelDto(

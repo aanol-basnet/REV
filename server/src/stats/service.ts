@@ -1,15 +1,18 @@
 import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
-import type {
-  Listen,
-  ListenBatchResult,
-  ListeningReport,
-  ReportQuery,
-  TasteProfile,
-  TasteQuery,
-  Track,
+import {
+  type InteractionBatchResult,
+  type InteractionEvent,
+  type Listen,
+  type ListenBatchResult,
+  ListenContext,
+  type ListeningReport,
+  type ReportQuery,
+  type TasteProfile,
+  type TasteQuery,
+  type Track,
 } from '@rev/schemas';
 import type { Db } from '../db/client.js';
-import { plays } from '../db/schema.js';
+import { interactions, plays } from '../db/schema.js';
 import { UpstreamError } from '../adapters/errors.js';
 import {
   artistKey,
@@ -19,7 +22,8 @@ import {
   type PlayRow,
   periodBounds,
 } from './report.js';
-import { buildTaste } from './taste.js';
+import { type ListenOutcome, outcomeOf } from './outcomes.js';
+import { buildTaste, type InteractionRow } from './taste.js';
 import { timesOfDay, type TimeTaste } from './time-of-day.js';
 import { DAY_MS, Zone } from './zone.js';
 
@@ -42,7 +46,8 @@ export class ListeningService {
 
   /**
    * Records listens; a listen already recorded (same track and start) is ignored, so the app can
-   * safely resend after a lost response. Fails, keeping what was recorded so far, when the music
+   * safely resend after a lost response, except that a resend with an outcome (a play sent again
+   * when it ended) updates its context and time heard. Fails, keeping what was recorded so far, when the music
    * server can't be reached: the app keeps the rest and tries again later.
    */
   async record(userId: number, listens: Listen[]): Promise<ListenBatchResult> {
@@ -50,6 +55,8 @@ export class ListeningService {
     const details = new Map<string, { track: Track; genres: string[] } | null>();
     for (const listen of [...listens].sort((a, b) => a.startedAt - b.startedAt)) {
       if (this.exists(userId, listen)) {
+        // A play sent again when it ended: keep how it went (no second scrobble).
+        if (listen.context?.outcome) this.updateEnding(userId, listen);
         result.duplicates += 1;
         continue;
       }
@@ -126,7 +133,7 @@ export class ListeningService {
     const rows = this.rows(userId, { from: now - TASTE_DAYS * DAY_MS, to: now + DAY_MS });
     const zone = new Zone(query.tz);
     return {
-      ...buildTaste(rows, zone, now),
+      ...buildTaste(rows, zone, now, this.interactionRows(userId, now - TASTE_DAYS * DAY_MS)),
       timesOfDay: timesOfDay(rows, zone, now).map((t) => ({
         time: t.time,
         plays: t.plays,
@@ -137,11 +144,92 @@ export class ListeningService {
     };
   }
 
+  private interactionRows(userId: number, from: number): InteractionRow[] {
+    return this.db
+      .select()
+      .from(interactions)
+      .where(and(eq(interactions.userId, userId), gte(interactions.at, from)))
+      .all()
+      .map((r) => ({
+        kind: r.kind,
+        trackId: r.trackId,
+        at: r.at,
+        artistId: r.artistId,
+        genres: parseGenres(r.genres),
+      }));
+  }
+
   /** What you listen to in each part of the day, from the last two years of listens. */
   timesOfDay(userId: number, tz: string): TimeTaste[] {
     const now = this.now();
     const rows = this.rows(userId, { from: now - TASTE_DAYS * DAY_MS, to: now + DAY_MS });
     return timesOfDay(rows, new Zone(tz), now);
+  }
+
+  /**
+   * Records interactions with the song's artist and genres; resends are ignored. Like listens, it
+   * fails when the music server can't be reached, and the app tries again later.
+   */
+  async recordInteractions(
+    userId: number,
+    events: InteractionEvent[],
+  ): Promise<InteractionBatchResult> {
+    const result = { recorded: 0, duplicates: 0, unknown: 0 };
+    const details = new Map<string, { track: Track; genres: string[] } | null>();
+    for (const e of events) {
+      let detail = details.get(e.trackId);
+      if (detail === undefined) {
+        detail = await this.source.trackWithGenres(e.trackId).catch((err: unknown) => {
+          if (err instanceof UpstreamError && err.kind === 'not_found') return null;
+          throw err;
+        });
+        details.set(e.trackId, detail);
+      }
+      if (!detail) {
+        result.unknown += 1;
+        continue;
+      }
+      const inserted = this.db
+        .insert(interactions)
+        .values({
+          userId,
+          kind: e.kind,
+          trackId: e.trackId,
+          at: e.at,
+          artistId: detail.track.artistId,
+          artist: detail.track.artist,
+          genres: JSON.stringify(detail.genres),
+          recordedAt: this.now(),
+        })
+        .onConflictDoNothing()
+        .run();
+      if (inserted.changes > 0) result.recorded += 1;
+      else result.duplicates += 1;
+    }
+    return result;
+  }
+
+  private updateEnding(userId: number, listen: Listen): void {
+    const where = and(
+      eq(plays.userId, userId),
+      eq(plays.trackId, listen.trackId),
+      eq(plays.startedAt, listen.startedAt),
+    );
+    const row = this.db
+      .select({ durationMs: plays.durationMs, listenedMs: plays.listenedMs })
+      .from(plays)
+      .where(where)
+      .get();
+    if (!row) return;
+    const cap = row.durationMs > 0 ? row.durationMs : Number.MAX_SAFE_INTEGER;
+    this.db
+      .update(plays)
+      .set({
+        context: JSON.stringify(listen.context),
+        listenedMs: Math.min(listen.listenedMs ?? row.listenedMs, cap),
+      })
+      .where(where)
+      .run();
   }
 
   private exists(userId: number, listen: Listen): boolean {
@@ -189,7 +277,7 @@ export class ListeningService {
         year: r.year,
         genres: parseGenres(r.genres),
         durationMs: r.durationMs,
-        mode: modeOf(r.context),
+        ...fromContext(r),
       }));
   }
 
@@ -233,13 +321,25 @@ export class ListeningService {
 
 const TASTE_DAYS = 730;
 
-function modeOf(context: string | null): string | null {
-  if (!context) return null;
+/** What the taste profile reads from a listen's context: its listening mode and outcome. */
+function fromContext(r: {
+  kind: string;
+  listenedMs: number;
+  durationMs: number;
+  context: string | null;
+}): { mode: string | null; outcome: ListenOutcome } {
+  const parsed = r.context ? ListenContext.safeParse(safeJson(r.context)) : null;
+  const context = parsed?.success ? parsed.data : null;
+  const mode = context?.mode;
+  return {
+    mode: typeof mode === 'string' && mode.length > 0 ? mode : null,
+    outcome: outcomeOf({ ...r, context }),
+  };
+}
+
+function safeJson(text: string): unknown {
   try {
-    const value: unknown = JSON.parse(context);
-    const mode =
-      typeof value === 'object' && value !== null ? (value as { mode?: unknown }).mode : null;
-    return typeof mode === 'string' && mode.length > 0 ? mode : null;
+    return JSON.parse(text);
   } catch {
     return null;
   }

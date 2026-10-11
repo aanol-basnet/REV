@@ -12,7 +12,9 @@ import app.rev.data.connection.AndroidNetworkMonitor
 import app.rev.data.connection.ConnectionMonitor
 import app.rev.data.home.HomeRepositoryImpl
 import app.rev.data.local.RevDatabase
+import app.rev.data.stats.InteractionLogImpl
 import app.rev.data.stats.ListenQueue
+import app.rev.domain.learning.InteractionLog
 import app.rev.data.stats.StatsRepositoryImpl
 import app.rev.domain.repository.StatsRepository
 import app.rev.data.library.PlaylistRepositoryImpl
@@ -251,7 +253,8 @@ object DataModule {
         db: RevDatabase,
         library: LibraryRepository,
         offline: OfflineRepository,
-    ): PlaylistRepository = PlaylistRepositoryImpl(api, db, library, offline)
+        interactions: InteractionLog,
+    ): PlaylistRepository = PlaylistRepositoryImpl(api, db, library, offline, interactions)
 
     @Provides
     @Singleton
@@ -275,6 +278,11 @@ object DataModule {
     @Provides
     @Singleton
     fun provideFavoriteEvents(): FavoriteEvents = FavoriteEvents()
+
+    @Provides
+    @Singleton
+    fun provideInteractionLog(queue: ListenQueue, @ApplicationScope scope: CoroutineScope, favorites: FavoriteEvents): InteractionLog =
+        InteractionLogImpl(queue, scope, favorites)
 
     @Provides
     @Singleton

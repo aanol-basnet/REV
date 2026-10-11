@@ -1,11 +1,25 @@
 import type { TasteProfile } from '@rev/schemas';
 import type { PlayRow } from './report.js';
+import { OUTCOME_SIGNAL, outcomeOf } from './outcomes.js';
 import { DAY_MS, type Zone } from './zone.js';
 
 /** A listen's weight halves every this many days, so the profile follows changing taste. */
 const HALF_LIFE_DAYS = 180;
-/** A skip after this long says less about the song (you heard a good part of it). */
-const EARLY_SKIP_MS = 30_000;
+/**
+ * What each interaction says, as plays (positive) or skips (negative) of the song's artist and
+ * genres: adding to a playlist or favoriting says a lot; queueing it says a little; taking it out
+ * of the queue unheard is a mild no.
+ */
+const INTERACTION_WEIGHTS: Record<string, number> = {
+  playlist_add: 1.5,
+  favorite: 2,
+  repeat_one: 1,
+  play_next: 0.5,
+  queue_add: 0.5,
+  lyrics: 0.3,
+  unfavorite: -1,
+  queue_remove: -0.5,
+};
 const MAX_ARTISTS = 400;
 const MAX_GENRES = 100;
 const MAX_TRACKS = 3000;
@@ -18,6 +32,15 @@ const MAX_DAYPART_ITEMS = 15;
 const MIN_MODE_PLAYS = 10;
 const MIN_MODE_ITEM_PLAYS = 2;
 
+/** An interaction with a song, with its artist and genres. */
+export interface InteractionRow {
+  kind: string;
+  trackId: string;
+  at: number;
+  artistId: string | null;
+  genres: string[];
+}
+
 interface Tally {
   plays: number;
   skips: number;
@@ -25,7 +48,8 @@ interface Tally {
 
 /**
  * Turns the listening log into a taste profile: per artist, genre and decade a score from
- * recency-weighted plays and skips, per song its counts, and per part of the day (and per
+ * recency-weighted plays and skips (weighed by how each listen went, plus interactions such as
+ * playlist adds), per song its counts, and per part of the day (and per
  * listening mode) the genres and artists played more or less than usual then. Times of day come
  * from [timesOfDay].
  */
@@ -33,6 +57,7 @@ export function buildTaste(
   rows: PlayRow[],
   zone: Zone,
   now: number,
+  interactions: InteractionRow[] = [],
 ): Omit<TasteProfile, 'timesOfDay'> {
   const artists = new Map<string, Tally>();
   const genres = new Map<string, Tally & { name: string }>();
@@ -52,12 +77,15 @@ export function buildTaste(
 
   for (const row of rows) {
     const ageDays = Math.max(0, now - row.startedAt) / DAY_MS;
-    const weight = 0.5 ** (ageDays / HALF_LIFE_DAYS);
-    const played = row.kind === 'play';
-    const skipWeight = row.listenedMs < EARLY_SKIP_MS ? 1 : 0.5;
+    // How it went decides what it says: an interruption or browsing says nothing, a rejection
+    // more than getting bored late, a save more than a play.
+    const signal = OUTCOME_SIGNAL[row.outcome ?? outcomeOf({ ...row, context: null })];
+    if (signal.label === null) continue;
+    const played = signal.label === 0;
+    const weight = 0.5 ** (ageDays / HALF_LIFE_DAYS) * signal.weight;
     const add = (tally: Tally) => {
       if (played) tally.plays += weight;
-      else tally.skips += weight * skipWeight;
+      else tally.skips += weight;
     };
 
     if (row.artistId) add(entry(artists, row.artistId, () => ({ plays: 0, skips: 0 })));
@@ -89,6 +117,21 @@ export function buildTaste(
         for (const genre of row.genres) bump(target.genres, genre.toLowerCase());
         if (row.artistId) bump(target.artists, row.artistId);
       }
+    }
+  }
+
+  // Things done with songs count like plays (or skips) of them, by how much they say.
+  for (const i of interactions) {
+    const value = INTERACTION_WEIGHTS[i.kind];
+    if (value === undefined) continue;
+    const weight = 0.5 ** (Math.max(0, now - i.at) / DAY_MS / HALF_LIFE_DAYS) * Math.abs(value);
+    const add = (tally: Tally) => {
+      if (value > 0) tally.plays += weight;
+      else tally.skips += weight;
+    };
+    if (i.artistId) add(entry(artists, i.artistId, () => ({ plays: 0, skips: 0 })));
+    for (const genre of i.genres) {
+      add(entry(genres, genre.toLowerCase(), () => ({ name: genre, plays: 0, skips: 0 })));
     }
   }
 

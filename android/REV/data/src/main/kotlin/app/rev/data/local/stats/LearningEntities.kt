@@ -66,6 +66,27 @@ interface PendingFeedbackDao {
     suspend fun delete(trackId: String, listenStartedAt: Long, kind: String)
 }
 
+/** Something you did with a song (added it to a playlist, queued it...) that the server doesn't have yet. */
+@Entity(tableName = "pending_interactions", primaryKeys = ["kind", "trackId", "at"])
+data class PendingInteractionEntity(
+    /** playlist_add, play_next, queue_add, queue_remove, favorite, unfavorite, repeat_one, lyrics */
+    val kind: String,
+    val trackId: String,
+    val at: Long,
+)
+
+@Dao
+interface PendingInteractionDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(events: List<PendingInteractionEntity>)
+
+    @Query("SELECT * FROM pending_interactions ORDER BY at LIMIT :limit")
+    suspend fun oldest(limit: Int): List<PendingInteractionEntity>
+
+    @Query("DELETE FROM pending_interactions WHERE kind = :kind AND trackId = :trackId AND at = :at")
+    suspend fun delete(kind: String, trackId: String, at: Long)
+}
+
 /** A time you picked a listening mode (or listened without one) and the situation then, for guessing it later. */
 @Entity(tableName = "mode_choices", indices = [Index("at")])
 data class ModeChoiceEntity(

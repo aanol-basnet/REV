@@ -51,6 +51,10 @@ class PlaybackReporterImpl(private val api: LibraryApi, private val listens: Lis
         listens.add(trackId, startedAt, kind = "play", listenedMs = null, context = context?.toDto())
     }
 
+    override suspend fun ended(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext?) {
+        listens.update(trackId, startedAt, kind = "play", listenedMs = listenedMs, context = context?.toDto())
+    }
+
     override suspend fun skipped(trackId: String, startedAt: Long, listenedMs: Long, context: ListenContext?) {
         listens.add(trackId, startedAt, kind = "skip", listenedMs = listenedMs, context = context?.toDto())
     }

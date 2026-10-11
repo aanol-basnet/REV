@@ -34,7 +34,7 @@ export const ListenContext = z.looseObject({
   /** Songs started this session before this one (a session ends after 30 min without listening). */
   sessionPosition: z.number().int().nonnegative().max(1_000_000).optional(),
   sessionSkips: z.number().int().nonnegative().max(1_000_000).optional(),
-  /** For skips, how you left: next, previous, jump, new_queue, stopped. */
+  /** How you left: next, previous, jump, new_queue, stopped, or ended (played to the end). */
   endReason: z.string().max(20).nullish(),
   /** speaker, headphones, bluetooth, cast, other. */
   output: z.string().max(20).optional(),
@@ -73,12 +73,36 @@ export const ListenContext = z.looseObject({
   predictedScore: z.number().min(-100).max(100).nullish(),
   /** The phone's personal model's chance of skipping it, when it started. */
   predictedSkip: z.number().min(0).max(1).nullish(),
+
+  // How it ended, sent when the song ends (a play is first sent when it counts, then again).
+  /**
+   * saved, replayed, completed, outro, played, bored, rejected, interrupted, browsing or
+   * went_back (server/src/stats/outcomes.ts).
+   */
+  outcome: z.string().max(20).nullish(),
+  /** How the song began: previous, next, jump, auto or new_queue. */
+  arrivedBy: z.string().max(20).nullish(),
+  /** Paused at the moment you left it. */
+  pausedAtEnd: z.boolean().nullish(),
+  /** The most recent pause's length, and what was heard after it ended. */
+  lastPauseMs: z.number().int().min(0).nullish(),
+  heardSinceResumeMs: z.number().int().min(0).nullish(),
+  /** That pause was the phone's doing: a call, unplugged headphones, another app's sound. */
+  systemPause: z.boolean().nullish(),
+  /** Added to a playlist while it played. */
+  addedToPlaylist: z.boolean().nullish(),
+  /** Songs were being added to a playlist lately (quick skips then are browsing). */
+  curating: z.boolean().nullish(),
 });
 export type ListenContext = z.infer<typeof ListenContext>;
 
 export const Listen = z.object({
   trackId: LibraryId,
-  /** When the track started playing, epoch ms. Also what makes a listen unique (resends are ignored). */
+  /**
+   * When the track started playing, epoch ms. Also what makes a listen unique: a resend is
+   * ignored, except that one with an `outcome` in its context updates the context and time heard
+   * (a play sent again when it ends).
+   */
   startedAt: z.number().int().positive(),
   kind: ListenKind,
   /** How long it was actually heard. Known for skips; plays count the track's length when absent. */

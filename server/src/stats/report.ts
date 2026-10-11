@@ -17,6 +17,7 @@ import type {
   SkippedTrack,
   StatsTrack,
 } from '@rev/schemas';
+import type { ListenOutcome } from './outcomes.js';
 import type { Zone } from './zone.js';
 
 /** One logged listen, as reports read it. */
@@ -36,6 +37,8 @@ export interface PlayRow {
   durationMs: number;
   /** The listening mode the app recorded, if any. */
   mode?: string | null;
+  /** How it went (outcomeOf); worked out from kind and time heard when absent. */
+  outcome?: ListenOutcome;
 }
 
 export interface Bounds {

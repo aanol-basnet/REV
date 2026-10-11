@@ -1,0 +1,365 @@
+{
+  "about": "Listen outcomes: the server (server/src/stats/outcomes.ts) and the app (ListenOutcomes.kt) must classify each set of facts exactly like this.",
+  "cases": [
+    {
+      "name": "skipped within seconds",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 5000,
+        "endPositionMs": 5000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "rejected"
+    },
+    {
+      "name": "skipped after a minute",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 60000,
+        "endPositionMs": 60000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "bored"
+    },
+    {
+      "name": "a short song: half of it is the quick part",
+      "facts": {
+        "counted": false,
+        "durationMs": 40000,
+        "heardMs": 21000,
+        "endPositionMs": 21000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "bored"
+    },
+    {
+      "name": "skipped within seconds while making a playlist",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 5000,
+        "endPositionMs": 5000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": true
+      },
+      "outcome": "browsing"
+    },
+    {
+      "name": "bored while making a playlist still counts",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 60000,
+        "endPositionMs": 60000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": true
+      },
+      "outcome": "bored"
+    },
+    {
+      "name": "added to a playlist, then skipped",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 5000,
+        "endPositionMs": 5000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": true,
+        "curating": false
+      },
+      "outcome": "saved"
+    },
+    {
+      "name": "left while paused to talk",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 40000,
+        "endPositionMs": 40000,
+        "endReason": "next",
+        "pausedAtEnd": true,
+        "lastPauseMs": 180000,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "interrupted"
+    },
+    {
+      "name": "paused a moment, then skipped",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 5000,
+        "endPositionMs": 5000,
+        "endReason": "next",
+        "pausedAtEnd": true,
+        "lastPauseMs": 3000,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "rejected"
+    },
+    {
+      "name": "long pause, came back, moved on straight away",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 50000,
+        "endPositionMs": 50000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 300000,
+        "heardSinceResumeMs": 4000,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "interrupted"
+    },
+    {
+      "name": "long pause, came back, listened, then skipped",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 80000,
+        "endPositionMs": 80000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 300000,
+        "heardSinceResumeMs": 45000,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "bored"
+    },
+    {
+      "name": "a phone call paused it, then moved on",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 20000,
+        "endPositionMs": 20000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 5000,
+        "heardSinceResumeMs": 2000,
+        "systemPause": true,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "interrupted"
+    },
+    {
+      "name": "stopped while paused",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 5000,
+        "endPositionMs": 5000,
+        "endReason": "stopped",
+        "pausedAtEnd": true,
+        "lastPauseMs": 1000,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "interrupted"
+    },
+    {
+      "name": "went back to the song before",
+      "facts": {
+        "counted": false,
+        "durationMs": 240000,
+        "heardMs": 5000,
+        "endPositionMs": 5000,
+        "endReason": "previous",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "went_back"
+    },
+    {
+      "name": "played to the end",
+      "facts": {
+        "counted": true,
+        "durationMs": 240000,
+        "heardMs": 240000,
+        "endPositionMs": 240000,
+        "endReason": "ended",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "completed"
+    },
+    {
+      "name": "skipped the long outro",
+      "facts": {
+        "counted": true,
+        "durationMs": 240000,
+        "heardMs": 180000,
+        "endPositionMs": 180000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "outro"
+    },
+    {
+      "name": "moved on in the last seconds",
+      "facts": {
+        "counted": true,
+        "durationMs": 240000,
+        "heardMs": 230000,
+        "endPositionMs": 232000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "completed"
+    },
+    {
+      "name": "counted, still playing",
+      "facts": {
+        "counted": true,
+        "durationMs": 240000,
+        "heardMs": 130000,
+        "endPositionMs": 130000,
+        "endReason": null,
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "played"
+    },
+    {
+      "name": "counted, then stopped",
+      "facts": {
+        "counted": true,
+        "durationMs": 240000,
+        "heardMs": 130000,
+        "endPositionMs": 130000,
+        "endReason": "stopped",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "played"
+    },
+    {
+      "name": "went back to it and listened",
+      "facts": {
+        "counted": true,
+        "durationMs": 240000,
+        "heardMs": 200000,
+        "endPositionMs": 240000,
+        "endReason": "ended",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "previous",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "replayed"
+    },
+    {
+      "name": "unknown length",
+      "facts": {
+        "counted": false,
+        "durationMs": 0,
+        "heardMs": 10000,
+        "endPositionMs": 10000,
+        "endReason": "next",
+        "pausedAtEnd": false,
+        "lastPauseMs": 0,
+        "heardSinceResumeMs": null,
+        "systemPause": false,
+        "arrivedBy": "auto",
+        "addedToPlaylist": false,
+        "curating": false
+      },
+      "outcome": "rejected"
+    }
+  ]
+}

@@ -10,6 +10,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import app.rev.domain.learning.InteractionKind
+import app.rev.domain.learning.InteractionLog
 import app.rev.domain.model.Track
 import app.rev.domain.playback.PlaybackQueue
 import app.rev.domain.playback.QueueSource
@@ -63,6 +65,8 @@ data class PlaybackProgress(val positionMs: Long = 0, val durationMs: Long = 0, 
 @Singleton
 class PlaybackController @Inject constructor(
     @ApplicationContext private val context: Context,
+    /** Queue edits and repeat say something about the songs; the smart queue learns from them. */
+    private val interactions: InteractionLog,
 ) : PlaybackQueue {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -110,12 +114,14 @@ class PlaybackController @Inject constructor(
     }
 
     override fun playNext(tracks: List<Track>) = command {
+        interactions.record(InteractionKind.PlayNext, tracks.map { it.id })
         if (mediaItemCount == 0) return@command play(tracks, 0, false)
         // Shuffled too: QueueShuffleOrder plays songs inserted after the current one next.
         addMediaItems(currentMediaItemIndex + 1, tracks.map { it.toItem() })
     }
 
     override fun addToQueue(tracks: List<Track>) = command {
+        interactions.record(InteractionKind.QueueAdd, tracks.map { it.id })
         val wasEmpty = mediaItemCount == 0
         addMediaItems(endOfPlayOrder(), tracks.map { it.toItem() })
         if (wasEmpty) prepare()
@@ -167,11 +173,21 @@ class PlaybackController @Inject constructor(
             Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
             else -> Player.REPEAT_MODE_OFF
         }
+        // Wanting a song again and again.
+        if (repeatMode == Player.REPEAT_MODE_ONE) currentMediaItem?.mediaId?.let { interactions.record(InteractionKind.RepeatOne, listOf(it)) }
     }
 
     // ---- Queue editing ---------------------------------------------------------------------
 
-    fun removeAt(index: Int) = command { if (index in 0 until mediaItemCount) removeMediaItem(index) }
+    fun removeAt(index: Int) = command {
+        if (index !in 0 until mediaItemCount) return@command
+        // Taking out a song that's still to come is passing on it; tidying up played ones isn't.
+        val order = playbackOrder(currentTimeline, shuffleModeEnabled)
+        if (order.indexOf(index) > order.indexOf(currentMediaItemIndex)) {
+            interactions.record(InteractionKind.QueueRemove, listOf(getMediaItemAt(index).mediaId))
+        }
+        removeMediaItem(index)
+    }
 
     /** Moves the song at play position [from] (as in [PlayerState.queue]) to play position [to]. */
     fun move(from: Int, to: Int) = command {

@@ -2,6 +2,10 @@ package app.rev.playback
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import app.rev.domain.learning.InteractionLog
+import app.rev.domain.learning.ListenFacts
+import app.rev.domain.learning.ListenOutcome
+import app.rev.domain.learning.ListenOutcomes
 import app.rev.domain.model.Track
 import app.rev.domain.modes.ActiveMode
 import app.rev.domain.playback.AudioOutput
@@ -29,6 +33,10 @@ import kotlinx.coroutines.launch
  * Each listen carries its [ListenContext], the training data for the smart queue: how the song got
  * into the queue, the queue and session around it, the phone's situation ([device]), what you did
  * while it played, and the smart queue's guess ([predict]).
+ *
+ * When a song ends, its [ListenOutcome] says how it went: rejected, got bored, skipped the outro,
+ * finished, or interrupted (left while paused to talk, after a call) and so not about the song. A
+ * play is reported as soon as it counts, then again when it ends, with how it ended.
  */
 internal class PlayReportTracker(
     private val player: Player,
@@ -43,8 +51,10 @@ internal class PlayReportTracker(
     private val modeAtStart: (DeviceSnapshot?, Boolean) -> ActiveMode? = { _, _ -> null },
     /** Each song as it starts: the situation for ranking what comes next. */
     private val onStart: (ListenContext) -> Unit = {},
-    /** Each play or skip once logged, to learn from (not when a feedback button already said more). */
-    private val onListen: (Track, ListenContext, Long, Boolean) -> Unit = { _, _, _, _ -> },
+    /** Each listen once it has ended, to learn from (not when a feedback button already said more). */
+    private val onListen: (Track, ListenContext, Long, ListenOutcome) -> Unit = { _, _, _, _ -> },
+    /** Playlist adds, for telling browsing from skipping. */
+    private val interactions: InteractionLog? = null,
     private val favoriteChanges: Flow<Pair<String, Boolean>>? = null,
     private val utcOffsetMinutes: (Long) -> Int = { TimeZone.getDefault().getOffset(it) / 60_000 },
 ) : Player.Listener {
@@ -56,6 +66,7 @@ internal class PlayReportTracker(
     private var listenedMs = 0L
     private var reported = false
     private var reportedKind: String? = null
+    private var finished = false
     private var announced = false
     private var ticker: Job? = null
 
@@ -66,6 +77,16 @@ internal class PlayReportTracker(
 
     /** Where the song you just left was, from the position jump that came with leaving it. */
     private var leftAtMs: Long? = null
+
+    /** How the current song began: previous, next, jump, auto, repeat or new_queue. */
+    private var arrivedBy: String? = null
+
+    // Pauses of any kind (yours, a call, unplugged headphones), for telling interruptions from skips.
+    private var pauseStartedAt: Long? = null
+    private var pauseBySystem = false
+    private var lastPauseMs = 0L
+    private var lastPauseBySystem = false
+    private var listenedAtResume: Long? = null
 
     private var previousTrackId: String? = null
     private var previousOutcome: String? = null
@@ -101,10 +122,39 @@ internal class PlayReportTracker(
         if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
             behaviour = behaviour.copy(pauses = behaviour.pauses + 1)
             pausedSince = clock()
+            pauseStarted(system = false)
+        } else if (!playWhenReady && reason in SYSTEM_PAUSES) {
+            pauseStarted(system = true)
         } else if (playWhenReady) {
             pausedSince?.let { behaviour = behaviour.copy(pausedMs = behaviour.pausedMs + (clock() - it)) }
             pausedSince = null
+            pauseEnded()
         }
+    }
+
+    /** A call or another app's sound holds playback without pausing it: that's an interruption too. */
+    override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+        if (trackId == null) return
+        if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS) {
+            pauseStarted(system = true)
+        } else if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE && pauseBySystem && player.playWhenReady) {
+            pauseEnded()
+        }
+    }
+
+    private fun pauseStarted(system: Boolean) {
+        if (pauseStartedAt != null) return
+        pauseStartedAt = clock()
+        pauseBySystem = system
+    }
+
+    private fun pauseEnded() {
+        val started = pauseStartedAt ?: return
+        lastPauseMs = clock() - started
+        lastPauseBySystem = pauseBySystem
+        listenedAtResume = listenedMs
+        pauseStartedAt = null
+        pauseBySystem = false
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -114,13 +164,14 @@ internal class PlayReportTracker(
         val handedOver = reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED &&
             id != null && id == trackId && player.currentPosition > HANDOVER_MIN_POSITION_MS
         if (handedOver) return
-        // Next, previous, a jump in the queue, or a new queue: the user moved on.
+        // Next, previous, a jump in the queue, or a new queue: the user moved on; or it played out.
         val endReason = when (reason) {
             Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> endReasonFor(queueIndex, player.currentMediaItemIndex)
             Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> if (mediaItem == null) EndReason.Stopped else EndReason.NewQueue
+            Player.MEDIA_ITEM_TRANSITION_REASON_AUTO, Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> EndReason.Ended
             else -> null
         }
-        endReason?.let(::maybeReportSkip)
+        endReason?.let { finish(it) }
 
         if (trackId != null) {
             previousTrackId = trackId
@@ -135,9 +186,21 @@ internal class PlayReportTracker(
         listenedMs = 0
         reported = false
         reportedKind = null
+        finished = false
         announced = false
         leftAtMs = null
         pausedSince = null
+        pauseStartedAt = null
+        pauseBySystem = false
+        lastPauseMs = 0
+        lastPauseBySystem = false
+        listenedAtResume = null
+        arrivedBy = when (reason) {
+            Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "auto"
+            Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT -> "repeat"
+            Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "new_queue"
+            else -> endReason?.wire
+        }
         queueIndex = player.currentMediaItemIndex
         behaviour = ListenBehaviour(startPositionMs = player.currentPosition.coerceAtLeast(0))
         context = null
@@ -183,6 +246,7 @@ internal class PlayReportTracker(
             mode = mode?.mode?.id,
             modeName = mode?.mode?.name,
             modeSource = mode?.source?.wire,
+            arrivedBy = arrivedBy,
         )
         context = started
         onStart(started)
@@ -222,17 +286,63 @@ internal class PlayReportTracker(
         scope.launch { reporter.nowPlaying(id) }
     }
 
-    private fun maybeReportSkip(reason: EndReason) {
-        val id = trackId ?: return
-        if (reported || !PlayCountPolicy.isSkip(durationMs, listenedMs)) return
+    /** The song was left ([reason]): a skip if it hadn't counted, else the end of a play. */
+    /** Returns the report's job, or null when there was nothing to report. */
+    private fun finish(reason: EndReason, at: Long? = null): Job? {
+        val id = trackId ?: return null
+        if (finished) return null
+        finished = true
+        val position = if (reason == EndReason.Ended) durationMs.takeIf { it > 0 } ?: leftAtMs else at ?: leftAtMs
+        if (reported && reportedKind == "play") {
+            val outcome = ListenOutcomes.classify(facts(reason, position, counted = true))
+            val ctx = finalContext(position)?.copy(endReason = reason, outcome = outcome)
+            val started = startedAt
+            val heard = listenedMs
+            val job = scope.launch { reporter.ended(id, started, heard, ctx) }
+            learnFrom(ctx, outcome)
+            return job
+        }
+        if (reported || !PlayCountPolicy.isSkip(durationMs, listenedMs)) return null
         reported = true
         reportedKind = "skip"
-        sessionSkips += 1
+        val outcome = ListenOutcomes.classify(facts(reason, position, counted = false))
+        if (outcome.skipped) sessionSkips += 1
         val started = startedAt
         val heard = listenedMs
-        val ctx = finalContext(leftAtMs)?.copy(endReason = reason)
-        scope.launch { reporter.skipped(id, started, heard, ctx) }
-        learnFrom(ctx, skipped = true)
+        val ctx = finalContext(position)?.copy(endReason = reason, outcome = outcome)
+        val job = scope.launch { reporter.skipped(id, started, heard, ctx) }
+        learnFrom(ctx, outcome)
+        return job
+    }
+
+    /**
+     * How the song playing now would go if it were left at [positionMs] for [reason]: what the
+     * smart queue reads a skip as. Null with nothing playing.
+     */
+    fun outcomeIfLeft(positionMs: Long, reason: EndReason): ListenOutcome? {
+        if (trackId == null) return null
+        val counted = reportedKind == "play" || PlayCountPolicy.counts(durationMs, listenedMs)
+        return ListenOutcomes.classify(facts(reason, positionMs, counted))
+    }
+
+    private fun facts(reason: EndReason, positionMs: Long?, counted: Boolean): ListenFacts {
+        val now = clock()
+        val ongoing = pauseStartedAt
+        val id = trackId
+        return ListenFacts(
+            counted = counted,
+            durationMs = durationMs,
+            heardMs = listenedMs,
+            endPositionMs = positionMs,
+            endReason = reason.wire,
+            pausedAtEnd = ongoing != null,
+            lastPauseMs = if (ongoing != null) now - ongoing else lastPauseMs,
+            heardSinceResumeMs = if (ongoing != null) null else listenedAtResume?.let { listenedMs - it },
+            systemPause = if (ongoing != null) pauseBySystem else lastPauseBySystem,
+            arrivedBy = arrivedBy,
+            addedToPlaylist = id != null && interactions?.addedToPlaylist(id, startedAt) == true,
+            curating = interactions?.curating(now) == true,
+        )
     }
 
     private fun maybeReportPlayed() {
@@ -243,12 +353,14 @@ internal class PlayReportTracker(
         val started = startedAt
         val ctx = finalContext(player.currentPosition)
         scope.launch { reporter.played(id, started, ctx) }
-        learnFrom(ctx, skipped = false)
     }
 
-    private fun learnFrom(ctx: ListenContext?, skipped: Boolean) {
+    /** The service is going away: the song playing now ends here. Returns the report's job, to wait for. */
+    fun stop(): Job? = finish(EndReason.Stopped, at = player.currentPosition)
+
+    private fun learnFrom(ctx: ListenContext?, outcome: ListenOutcome) {
         val t = track ?: return
-        if (ctx != null && !feedbackGiven) onListen(t, ctx, startedAt, skipped)
+        if (ctx != null && !feedbackGiven && outcome.learnable) onListen(t, ctx, startedAt, outcome)
     }
 
     /** The listen a feedback button is about: the song playing, when it started, where it is now. */
@@ -268,8 +380,21 @@ internal class PlayReportTracker(
     private fun finalContext(positionMs: Long?): ListenContext? {
         val paused = pausedSince?.let { clock() - it } ?: 0
         val volume = runCatching { device()?.volume }.getOrNull()
+        val now = clock()
+        val ongoing = pauseStartedAt
+        val id = trackId
         return context?.copy(
-            behaviour = behaviour.copy(endPositionMs = positionMs, pausedMs = behaviour.pausedMs + paused, volumeEnd = volume),
+            behaviour = behaviour.copy(
+                endPositionMs = positionMs,
+                pausedMs = behaviour.pausedMs + paused,
+                volumeEnd = volume,
+                pausedAtEnd = ongoing != null,
+                lastPauseMs = (if (ongoing != null) now - ongoing else lastPauseMs).takeIf { it > 0 },
+                heardSinceResumeMs = if (ongoing != null) null else listenedAtResume?.let { listenedMs - it },
+                systemPause = if (ongoing != null) pauseBySystem else lastPauseBySystem,
+                addedToPlaylist = id != null && interactions?.addedToPlaylist(id, startedAt) == true,
+                curating = interactions?.curating(now) == true,
+            ),
         )
     }
 
@@ -291,5 +416,11 @@ internal class PlayReportTracker(
 
         /** Matches the server's listening sessions. */
         const val SESSION_GAP_MS = 30 * 60_000L
+
+        /** Pauses the phone makes: losing audio focus for good, or headphones unplugged. */
+        val SYSTEM_PAUSES = setOf(
+            Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS,
+            Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY,
+        )
     }
 }

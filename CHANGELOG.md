@@ -3,6 +3,25 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.9.0 — 2026-10-11
+
+### New
+
+- **REV understands how you skip.** Not every skip means "I don't like this":
+  - Skipping in the first few seconds says "not this". Getting bored partway counts for less.
+  - Skipping a long outro counts as listening to the song, not as a skip.
+  - Pausing to talk to someone, a phone call, or unplugging your headphones isn't held against
+    the song, even if you move on afterwards.
+  - Flicking through songs while you add some to a playlist is browsing, not judging. It doesn't
+    count, and it doesn't make the smart queue change what's coming up.
+  - Going back to replay a song, or adding it to a playlist, counts extra in its favour.
+- **It learns from more than listening.** Adding songs to playlists, favorites, Play next, Add to
+  queue, taking songs out of the queue, repeat, and following the lyrics all teach REV what you
+  like. It works offline too.
+- **The personal AI tunes itself.** Each time it retrains, it tries different ways of learning,
+  checks which predicts your recent listening best, and keeps that. It also keeps a record of how
+  accurate it was each time, so it can only get better as you listen.
+
 ## 0.8.0 — 2026-10-11
 
 ### New

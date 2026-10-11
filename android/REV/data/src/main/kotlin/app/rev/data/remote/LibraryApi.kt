@@ -263,6 +263,15 @@ class LibraryApi(
             }
         }) { }
 
+    /** Things you did with songs (`POST /api/stats/interactions`). */
+    internal suspend fun interactions(events: List<InteractionDto>): Result<Unit, LibraryError> =
+        send("stats/interactions", { url ->
+            http.client.post(url) {
+                contentType(ContentType.Application.Json)
+                setBody(InteractionBatchDto(events))
+            }
+        }) { }
+
     /** Your personal skip model as last trained by the server; null before it has trained one. */
     internal suspend fun skipModel(): Result<SkipModelDto?, LibraryError> =
         get<SkipModelResponseDto, _>("stats/model") { it.model }

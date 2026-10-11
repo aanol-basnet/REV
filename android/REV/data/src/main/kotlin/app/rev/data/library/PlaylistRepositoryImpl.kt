@@ -12,6 +12,8 @@ import app.rev.domain.repository.AddedToPlaylist
 import app.rev.domain.repository.LibraryError
 import app.rev.domain.repository.LibraryRepository
 import app.rev.domain.repository.OfflineRepository
+import app.rev.domain.learning.InteractionKind
+import app.rev.domain.learning.InteractionLog
 import app.rev.domain.repository.PlaylistRepository
 import app.rev.domain.model.OfflineCollection
 import app.rev.domain.model.OfflineKind
@@ -26,11 +28,18 @@ class PlaylistRepositoryImpl(
     private val db: RevDatabase,
     private val library: LibraryRepository,
     private val offline: OfflineRepository,
+    /** Adding songs to a playlist is a strong "I like this", and means you're browsing for songs. */
+    private val interactions: InteractionLog? = null,
 ) : PlaylistRepository {
     private val dao = db.libraryDao()
 
     override suspend fun create(name: String, trackIds: List<String>): Result<PlaylistDetail, LibraryError> =
-        api.createPlaylist(name, trackIds).stored().also { if (it is Result.Ok) library.refreshPlaylists() }
+        api.createPlaylist(name, trackIds).stored().also {
+            if (it is Result.Ok) {
+                library.refreshPlaylists()
+                interactions?.record(InteractionKind.PlaylistAdd, trackIds)
+            }
+        }
 
     override suspend fun duplicate(id: String): Result<PlaylistDetail, LibraryError> =
         api.duplicatePlaylist(id).stored().also { if (it is Result.Ok) library.refreshPlaylists() }
@@ -42,6 +51,7 @@ class PlaylistRepositoryImpl(
         when (val result = api.addPlaylistTracks(id, trackIds)) {
             is Result.Ok -> {
                 val detail = store(result.value.playlist)
+                interactions?.record(InteractionKind.PlaylistAdd, trackIds)
                 Result.Ok(AddedToPlaylist(detail, result.value.added, result.value.skipped))
             }
             is Result.Err -> result
