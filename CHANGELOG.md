@@ -3,6 +3,13 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.7.1 — 2026-10-11
+
+### Fixed
+
+- The navigation bar follows the back button: going back from Library to Home highlights Home
+  again, instead of staying on Library.
+
 ## 0.7.0 — 2026-10-10
 
 ### New

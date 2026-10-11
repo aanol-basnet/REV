@@ -128,19 +128,22 @@ private enum class Tab(val label: Int, val icon: ImageVector, val route: Any) {
 @Composable
 fun MainScreen(connection: ConnectionState) {
     val navController = rememberNavController()
-    // Detail screens keep the tab they were opened from highlighted.
-    var currentTab by rememberSaveable { mutableIntStateOf(Tab.Home.ordinal) }
+    // Detail screens keep the tab they were opened from highlighted; landing on a tab's own
+    // screen (including by going back) highlights that tab.
+    var lastTab by rememberSaveable { mutableIntStateOf(Tab.Home.ordinal) }
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val destination = backStackEntry?.destination
+    val currentTab = destination?.tabIndex()?.takeIf { it >= 0 } ?: lastTab
+    lastTab = currentTab
 
     fun selectTab(tab: Tab) {
         val reselected = currentTab == tab.ordinal
-        currentTab = tab.ordinal
+        lastTab = tab.ordinal
         // Tapping the tab you're on goes back to its start (e.g. from an album to Home).
         if (reselected && navController.popBackStack(tab.route, inclusive = false)) return
         navController.navigateToTab(tab.route)
     }
 
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val destination = backStackEntry?.destination
     // The full player, its queue and lyrics take the whole screen.
     val fullScreen = destination?.hasRoute<PlayerRoute>() == true ||
         destination?.hasRoute<QueueRoute>() == true ||
