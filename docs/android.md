@@ -201,7 +201,8 @@ listening and the queue edits.
   know or new ones (via the profile's play counts).
 - **Taste profile** (`TasteRepository`, `GET /api/stats/taste`): long-term scores from the
   server's listening log: artists, genres, decades, per-song plays and skips, and what's played
-  more or less in each 4-hour part of the day. Refreshed every 6 h, cached in
+  more or less in each 4-hour part of the day, and your songs for each time of day (morning,
+  afternoon, evening, night) for the offline time-of-day mix (`OfflineMixes`). Refreshed every 6 h, cached in
   `taste_profile.json` so it works offline; cleared when switching server.
 - **Scoring** (`TasteScorer`): session mood first, then the profile, the time of day, the
   familiar-or-new preference, a penalty for songs you nearly always skip and songs already heard
@@ -304,7 +305,10 @@ Behaviour:
 (`OfflineTrackDao.observeDownloaded`, with genres borrowed from the library cache): **All
 downloads**, **Liked Songs** (cached favorites that are downloaded), radios for the three most
 downloaded artists (their songs every third track; in between, artists sharing their genres) and
-mixes for the two biggest genres. A mix needs at least six songs. Songs by one artist are spread
+mixes for the two biggest genres, and first, the mix for the current time of day (your songs for
+it from the cached taste profile, every third song one by an artist or in a genre you lean toward
+then; it also stands in for the server's `time:` mix when the server can't be reached). A mix
+needs at least six songs. Songs by one artist are spread
 at least three apart where possible. Offline mixes have ids starting `offline:` and show an
 _Offline_ badge.
 
@@ -337,7 +341,8 @@ Home shows the server's recommendations (see api.md → Home and mixes), cached 
 `filesDir/home_feed.json` so it opens instantly and works offline: a greeting over a colour wash
 from what you've been playing, six quick-access album tiles, **Made for you** mixes (tap to open
 the mix's page with its songs, Play, Shuffle and Queue; the card's play button plays it straight
-away; artist radios, genre mixes, Liked Songs, Discovery), rows such as _On repeat_, _Because you listen
+away; your morning, afternoon, evening or night mix first, then artist radios, genre mixes,
+Liked Songs, Discovery), rows such as _On repeat_, _Because you listen
 to …_ (links to the artist), _More …_ (links to the genre), _Rediscover_ and _Not heard yet_, and
 your genres as chips, then **From your downloads** (offline mixes; first when offline). Pull to
 refresh rebuilds the recommendations. Tapping the tab you're already on returns to that tab's start.

@@ -12,6 +12,7 @@ import { UpstreamError } from '../adapters/errors.js';
 import { HttpError } from '../api/errors.js';
 import type { PlaylistService } from '../library/playlists.js';
 import { DAY_MS, Zone } from './zone.js';
+import { resolveTracks } from '../library/resolve.js';
 
 /** The parts of the music server smart playlists need. */
 export interface SmartPlaylistLibrary {
@@ -27,8 +28,6 @@ const FORGOTTEN_SIZE = 50;
 const YEAR_SIZE = 50;
 /** Fewer songs than this isn't much of a playlist. */
 const MIN_TRACKS = 5;
-/** Track lookups in flight at once. */
-const LOOKUP_CONCURRENCY = 8;
 
 interface Candidate {
   trackId: string;
@@ -58,7 +57,10 @@ export class SmartPlaylistService {
 
   async detail(userId: number, id: string, tz: string): Promise<SmartPlaylistDetail> {
     const candidates = this.candidates(userId, id, new Zone(tz));
-    const tracks = await this.resolve(candidates.map((c) => c.trackId));
+    const tracks = await resolveTracks(
+      candidates.map((c) => c.trackId),
+      (id) => this.library.track(id),
+    );
     return { ...this.summary(userId, id, candidates), trackCount: tracks.length, tracks };
   }
 
@@ -175,23 +177,6 @@ export class SmartPlaylistService {
     const years: number[] = [];
     for (let y = zone.date(row.last).year; y >= zone.date(row.first).year; y--) years.push(y);
     return years;
-  }
-
-  /** The tracks, in order, leaving out those no longer in the library. */
-  private async resolve(ids: string[]): Promise<Track[]> {
-    const found: (Track | null)[] = new Array<Track | null>(ids.length).fill(null);
-    let next = 0;
-    const worker = async () => {
-      while (next < ids.length) {
-        const i = next++;
-        found[i] = await this.library.track(ids[i] as string).catch((err: unknown) => {
-          if (err instanceof UpstreamError && err.kind === 'not_found') return null;
-          throw err;
-        });
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(LOOKUP_CONCURRENCY, ids.length) }, worker));
-    return found.filter((t): t is Track => t !== null);
   }
 
   private savedPlaylistId(userId: number, smartId: string): string | null {

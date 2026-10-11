@@ -3,6 +3,15 @@
 What changed in each version of the REV app. The app shows these notes when you tap the version at
 the bottom of Settings.
 
+## 0.8.0 — 2026-10-11
+
+### New
+
+- **Your morning, afternoon, evening and night mix.** REV learns which songs you play at each time
+  of day, and the first mix on Home is the one for right now: mostly your songs for this time,
+  with new songs that fit it mixed in. Songs you tend to skip at this time stay out. It appears
+  once you've listened enough at that time of day, and works offline too, from your downloads.
+
 ## 0.7.1 — 2026-10-11
 
 ### Fixed

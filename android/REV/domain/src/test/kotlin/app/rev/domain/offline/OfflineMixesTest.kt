@@ -2,7 +2,12 @@ package app.rev.domain.offline
 
 import app.rev.domain.model.Mix
 import app.rev.domain.model.MixKind
+import app.rev.domain.model.HomeFeed
+import app.rev.domain.model.TimeOfDay
 import app.rev.domain.model.Track
+import app.rev.domain.model.forHour
+import app.rev.domain.taste.TasteProfile
+import app.rev.domain.taste.TimeOfDayTaste
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,6 +44,45 @@ class OfflineMixesTest {
         assertTrue(mixes.all { it.isOffline })
         // Tool's radio features A Perfect Circle, who share its genre.
         assertEquals(listOf("A Perfect Circle"), mixes.first { it.name == "Tool" }.featuring)
+    }
+
+    private val evenings = TasteProfile(
+        timesOfDay = mapOf(
+            TimeOfDay.Evening to TimeOfDayTaste(
+                tracks = adele.take(4).associate { it.id to 2.0 },
+                genres = mapOf("pop" to 0.8),
+                artists = emptyMap(),
+            ),
+        ),
+    )
+
+    @Test
+    fun `offers the mix for this time of day first, from your songs then and ones that fit`() {
+        val mixes = OfflineMixes.available(downloaded, emptySet(), evenings, hour = 19)
+        val time = mixes.first()
+        assertEquals("offline:time:evening", time.id)
+        assertEquals(MixKind.Time, time.kind)
+        assertEquals("evening", time.name)
+        // Nothing known about mornings: no mix then.
+        assertTrue(OfflineMixes.available(downloaded, emptySet(), evenings, hour = 8).none { it.kind == MixKind.Time })
+
+        val songs = OfflineMixes.tracks(time, downloaded, emptySet(), Random(1), evenings)
+        // Your four evening songs, and the other Pop songs that fit; no Tool.
+        assertEquals(adele.map { it.id }.toSet(), songs.map { it.id }.toSet())
+        // Two of yours, then one that fits.
+        val yours = setOf("adele1", "adele2", "adele3", "adele4")
+        assertTrue(songs.take(2).all { it.id in yours })
+        assertTrue(songs[2].id !in yours)
+    }
+
+    @Test
+    fun `a cached feed only offers the time-of-day mix at that time`() {
+        val mix = Mix("time:morning", MixKind.Time, "morning", emptyList(), emptyList())
+        val other = Mix("favorites", MixKind.Favorites, null, emptyList(), emptyList())
+        val feed = HomeFeed(0, emptyList(), listOf(mix, other), emptyList(), emptyList())
+        assertEquals(listOf(mix, other), feed.forHour(9).mixes)
+        assertEquals(listOf(other), feed.forHour(20).mixes)
+        assertEquals(listOf(TimeOfDay.Night, TimeOfDay.Morning, TimeOfDay.Afternoon, TimeOfDay.Evening, TimeOfDay.Night), listOf(4, 5, 12, 17, 22).map(TimeOfDay::of))
     }
 
     @Test

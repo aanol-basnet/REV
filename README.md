@@ -26,8 +26,9 @@ server, and none of those services needs to be exposed to the internet.
   instant and works offline.
 - **Playback**: gapless, crossfade, ReplayGain (track or album) and an equalizer. Playback survives
   closing the app, and you get lock-screen, notification and headset controls.
-- **Home**: recently played, mixes built from your listening, similar artists, albums you haven't
-  heard, and rediscoveries.
+- **Home**: recently played, mixes built from your listening (including one for this time of day:
+  your morning, afternoon, evening or night mix), similar artists, albums you haven't heard, and
+  rediscoveries.
 - **Autoplay**: when the queue runs out, REV plays the next album, more by the same artist, or
   similar songs, picked to fit the moment.
 - **Smart queue**: learns from your skips and your listening history (artists, genres, eras, time

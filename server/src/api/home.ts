@@ -5,16 +5,19 @@ import {
   HomeFeed,
   HomeQuery,
   MixId,
+  MixQuery,
   MixTracks,
   NextAlbum,
   NextAlbumRequest,
   RadioRequest,
   RadioTracks,
+  TimeOfDay,
 } from '@rev/schemas';
-import { requireAuth } from '../auth/middleware.js';
+import { authOf, requireAuth } from '../auth/middleware.js';
 import type { AuthService } from '../auth/service.js';
 import type { AutoplayService } from '../home/autoplay.js';
 import type { HomeService } from '../home/service.js';
+import type { TimeMixService } from '../home/time-mix.js';
 import { HttpError } from './errors.js';
 import { parseInput } from './validation.js';
 
@@ -25,6 +28,7 @@ export function homeRoutes(
   auth: AuthService,
   home: HomeService | null,
   autoplay: AutoplayService | null,
+  timeMix: TimeMixService | null = null,
 ): void {
   const preHandler = requireAuth(auth);
   const configured = <T>(service: T | null): T => {
@@ -35,12 +39,22 @@ export function homeRoutes(
   const service = (): HomeService => configured(home);
 
   app.get('/api/home', { preHandler }, async (req) => {
-    const { refresh } = parseInput(HomeQuery, req.query);
-    return HomeFeed.parse(await service().feed(refresh === 'true'));
+    const { refresh, tz } = parseInput(HomeQuery, req.query);
+    const feed = await service().feed(refresh === 'true');
+    // The mix for this time of day goes first; it's yours and changes with the clock, so it isn't
+    // part of the shared, cached feed.
+    const time = tz && timeMix ? timeMix.current(authOf(req).userId, tz) : null;
+    return HomeFeed.parse(time ? { ...feed, mixes: [time, ...feed.mixes] } : feed);
   });
 
   app.get('/api/mixes/:id', { preHandler }, async (req) => {
     const { id } = parseInput(MixParams, req.params);
+    const time = TimeOfDay.safeParse(id.startsWith('time:') ? id.slice('time:'.length) : null);
+    if (time.success) {
+      const { tz } = parseInput(MixQuery, req.query);
+      const tracks = await configured(timeMix).tracks(authOf(req).userId, time.data, tz ?? 'UTC');
+      return MixTracks.parse({ id, tracks });
+    }
     return MixTracks.parse({ id, tracks: await service().mix(id) });
   });
 

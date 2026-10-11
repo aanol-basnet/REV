@@ -1,5 +1,7 @@
 package app.rev.domain.taste
 
+import app.rev.domain.model.TimeOfDay
+
 /**
  * What the listening history says about you (built by the server from REV's listening log, cached
  * on the phone). Scores run from -1 (mostly skipped) to 1 (played a lot); missing means unknown, 0.
@@ -14,6 +16,8 @@ data class TasteProfile(
     val dayparts: List<Daypart> = emptyList(),
     /** Listening modes by id, with what's played more or less in them. */
     val modes: Map<String, ModeTaste> = emptyMap(),
+    /** Each time of day with enough listening: what you play then. */
+    val timesOfDay: Map<TimeOfDay, TimeOfDayTaste> = emptyMap(),
 ) {
     fun artist(id: String?): Double = id?.let(artists::get) ?: 0.0
     fun genre(name: String?): Double = name?.lowercase()?.let(genres::get) ?: 0.0
@@ -53,6 +57,16 @@ data class TrackHistory(val plays: Int, val skips: Int)
 
 /** A listening mode: genres (lowercase) and artists played more (up to 1) or less (down to -1) than usual in it. */
 data class ModeTaste(val genres: Map<String, Double>, val artists: Map<String, Double>)
+
+/**
+ * What you play at one time of day: songs by score (higher: played more then, lately, and mostly
+ * then), and genres (lowercase) and artists played more (up to 1) or less (down to -1) than usual.
+ */
+data class TimeOfDayTaste(
+    val tracks: Map<String, Double>,
+    val genres: Map<String, Double>,
+    val artists: Map<String, Double>,
+)
 
 /** A part of the day: genres (lowercase) and artists played more (up to 1) or less (down to -1) than usual. */
 data class Daypart(val fromHour: Int, val genres: Map<String, Double>, val artists: Map<String, Double>)

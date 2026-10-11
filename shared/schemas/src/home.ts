@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Album, Track } from './library.js';
+import { TimeZone } from './stats.js';
 
 /**
  * Home screen recommendations, built by the server from the listening history Navidrome keeps
@@ -7,15 +8,16 @@ import { Album, Track } from './library.js';
  * clients (localized); each item says what it is and what it's based on.
  */
 
-export const MixKind = z.enum(['artist', 'genre', 'favorites', 'discovery']);
+/** `time`: what you play at this time of day (`name` is the `TimeOfDay`), and songs that fit it. */
+export const MixKind = z.enum(['artist', 'genre', 'favorites', 'discovery', 'time']);
 export type MixKind = z.infer<typeof MixKind>;
 
 /** A playable, generated track list. Fetch its tracks with `GET /api/mixes/:id`. */
 export const Mix = z.object({
-  /** `artist:<artistId>`, `genre:<name>`, `favorites` or `discovery`. */
+  /** `artist:<artistId>`, `genre:<name>`, `favorites`, `discovery` or `time:<TimeOfDay>`. */
   id: z.string(),
   kind: MixKind,
-  /** The artist or genre it's built around; null for favorites/discovery. */
+  /** The artist or genre it's built around, or the time of day; null for favorites/discovery. */
   name: z.string().nullable(),
   /** Other artists that feature, for a subtitle ("with Slipknot, KoЯn…"). */
   featuring: z.array(z.string()),
@@ -70,12 +72,19 @@ export type HomeFeed = z.infer<typeof HomeFeed>;
 export const HomeQuery = z.object({
   /** Rebuild now instead of using the recent result. */
   refresh: z.enum(['true', 'false']).optional(),
+  /** The listener's time zone (IANA); with it, the feed includes the mix for this time of day. */
+  tz: TimeZone.optional(),
 });
+
+/** For `time:` mixes: the listener's time zone (IANA), UTC if left out. */
+export const MixQuery = z.object({ tz: TimeZone.optional() });
 
 export const MixId = z
   .string()
   .max(300)
-  .regex(/^(artist:[A-Za-z0-9._-]{1,100}|genre:.{1,200}|favorites|discovery)$/u);
+  .regex(
+    /^(artist:[A-Za-z0-9._-]{1,100}|genre:.{1,200}|favorites|discovery|time:(morning|afternoon|evening|night))$/u,
+  );
 
 export const MixTracks = z.object({ id: z.string(), tracks: z.array(Track) });
 export type MixTracks = z.infer<typeof MixTracks>;

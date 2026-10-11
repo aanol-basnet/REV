@@ -9,10 +9,14 @@ import app.rev.domain.model.Track
 import app.rev.domain.repository.HomeRepository
 import app.rev.domain.repository.LibraryError
 import app.rev.domain.repository.RefreshResult
+import app.rev.domain.model.forHour
 import java.io.File
+import java.util.Calendar
+import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,14 +30,17 @@ import kotlinx.coroutines.withContext
 class HomeRepositoryImpl(
     private val api: LibraryApi,
     private val cacheFile: File,
+    private val timeZone: () -> String = { TimeZone.getDefault().id },
+    private val hour: () -> Int = { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) },
 ) : HomeRepository {
     private val feed = MutableStateFlow<HomeFeed?>(null)
     private val loadLock = Mutex()
     private var loaded = false
 
-    override fun observeFeed(): Flow<HomeFeed?> = feed.onStart { loadCache() }
+    /** The time-of-day mix only while it's that time: a cached morning feed doesn't offer it in the evening. */
+    override fun observeFeed(): Flow<HomeFeed?> = feed.map { it?.forHour(hour()) }.onStart { loadCache() }
 
-    override suspend fun refresh(force: Boolean): RefreshResult = when (val result = api.home(force)) {
+    override suspend fun refresh(force: Boolean): RefreshResult = when (val result = api.home(force, timeZone())) {
         is Result.Ok -> {
             loadLock.withLock { loaded = true }
             feed.value = result.value.toDomain()
@@ -49,7 +56,7 @@ class HomeRepositoryImpl(
         is Result.Err -> result
     }
 
-    override suspend fun mixTracks(mixId: String): Result<List<Track>, LibraryError> = api.mixTracks(mixId)
+    override suspend fun mixTracks(mixId: String): Result<List<Track>, LibraryError> = api.mixTracks(mixId, timeZone())
 
     /** Forgets the cached feed (another server's recommendations). */
     suspend fun clear() {

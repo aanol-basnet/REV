@@ -8,6 +8,7 @@ import app.rev.data.local.offline.OfflineTrackDao
 import app.rev.data.offline.OfflineDownloadScheduler
 import app.rev.data.offline.OfflineFiles
 import app.rev.data.offline.OfflineMixRepositoryImpl
+import app.rev.domain.taste.TasteRepository
 import app.rev.data.offline.OfflineRepositoryImpl
 import app.rev.data.offline.OfflineSettings
 import app.rev.data.offline.SmartDownloadScheduler
@@ -70,6 +71,6 @@ object OfflineModule {
 
     @Provides
     @Singleton
-    fun provideOfflineMixes(offline: OfflineRepository, library: LibraryRepository): OfflineMixRepository =
-        OfflineMixRepositoryImpl(offline, library)
+    fun provideOfflineMixes(offline: OfflineRepository, library: LibraryRepository, taste: TasteRepository): OfflineMixRepository =
+        OfflineMixRepositoryImpl(offline, library, taste)
 }

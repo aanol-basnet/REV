@@ -37,6 +37,7 @@ import { networkInterfaces } from 'node:os';
 import { CastTokens } from './cast/tokens.js';
 import { type Interfaces, lanUrls } from './system/lan.js';
 import { HomeService } from './home/service.js';
+import { TimeMixService } from './home/time-mix.js';
 import { AutoplayService } from './home/autoplay.js';
 import { TopTracksService } from './library/top-tracks.js';
 import { homeRoutes } from './api/home.js';
@@ -264,6 +265,7 @@ export async function buildApp({
       : null,
     listening,
   );
+  const autoplay = library ? new AutoplayService(library) : null;
   homeRoutes(
     app,
     authService,
@@ -275,7 +277,16 @@ export async function buildApp({
           onSectionError: (section, err) => app.log.warn({ err, section }, 'home section failed'),
         })
       : null,
-    library ? new AutoplayService(library) : null,
+    autoplay,
+    listening && library && autoplay
+      ? new TimeMixService({
+          times: (userId, tz) => listening.timesOfDay(userId, tz),
+          track: (id) => library.track(id),
+          radio: (req) => autoplay.radio(req),
+          now,
+          random: Math.random,
+        })
+      : null,
   );
   searchRoutes(app, authService, search, fetchImpl);
   downloadRoutes(app, authService, acquisition);

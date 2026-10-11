@@ -3,13 +3,16 @@ package app.rev.domain.offline
 import app.rev.domain.model.Mix
 import app.rev.domain.model.MixKind
 import app.rev.domain.model.OFFLINE_MIX_PREFIX
+import app.rev.domain.model.TimeOfDay
 import app.rev.domain.model.Track
+import app.rev.domain.taste.TasteProfile
+import kotlin.math.ln
 import kotlin.random.Random
 
 /**
  * Mixes built on the device from downloaded songs, so there is always something to play with no
- * server: one of everything, liked songs, and radios for the artists and genres you've downloaded
- * most. A server mix (from Home) can also be rebuilt from downloads when the server can't be
+ * server: one of everything, liked songs, radios for the artists and genres you've downloaded
+ * most, and the time-of-day mix (from the cached taste profile). A server mix (from Home) can also be rebuilt from downloads when the server can't be
  * reached.
  */
 object OfflineMixes {
@@ -18,21 +21,39 @@ object OfflineMixes {
     const val FAVORITES_ID = "${OFFLINE_MIX_PREFIX}favorites"
     private const val ARTIST_PREFIX = "${OFFLINE_MIX_PREFIX}artist:"
     private const val GENRE_PREFIX = "${OFFLINE_MIX_PREFIX}genre:"
+    private const val TIME_PREFIX = "time:"
 
     /** A mix with fewer songs than this isn't worth offering. */
     private const val MIN_TRACKS = 6
     private const val ARTIST_MIXES = 3
     private const val GENRE_MIXES = 2
 
+    /** Songs skipped this often (0–1) stay out of the time-of-day mix. */
+    private const val SKIPPED = 0.5
+
     /** Songs by one artist within this many of each other are spread apart where possible. */
     private const val ARTIST_GAP = 3
 
-    /** The mixes worth offering for [downloaded] songs; [favoriteIds] are the liked ones. */
-    fun available(downloaded: List<Track>, favoriteIds: Set<String>): List<Mix> {
+    /**
+     * The mixes worth offering for [downloaded] songs; [favoriteIds] are the liked ones. With
+     * [hour], the mix for that time of day comes first, when [profile] knows it and enough
+     * downloaded songs fit.
+     */
+    fun available(
+        downloaded: List<Track>,
+        favoriteIds: Set<String>,
+        profile: TasteProfile = TasteProfile(),
+        hour: Int? = null,
+    ): List<Mix> {
         if (downloaded.size < MIN_TRACKS) return emptyList()
-        val mixes = mutableListOf(
-            Mix(ALL_ID, MixKind.Downloads, null, topArtists(downloaded), covers(downloaded)),
-        )
+        val mixes = mutableListOf<Mix>()
+        hour?.let(TimeOfDay::of)?.let { time ->
+            val songs = timeMix(time, profile, downloaded, Random(0))
+            if (songs.size >= MIN_TRACKS) {
+                mixes += Mix("$OFFLINE_MIX_PREFIX$TIME_PREFIX${time.wire}", MixKind.Time, time.wire, topArtists(songs), covers(songs))
+            }
+        }
+        mixes += Mix(ALL_ID, MixKind.Downloads, null, topArtists(downloaded), covers(downloaded))
         val liked = downloaded.filter { it.id in favoriteIds }
         if (liked.size >= MIN_TRACKS) {
             mixes += Mix(FAVORITES_ID, MixKind.Favorites, null, topArtists(liked), covers(liked))
@@ -68,11 +89,22 @@ object OfflineMixes {
 
     /**
      * The songs of [mix] from [downloaded], shuffled. Works for offline mixes and for the server's
-     * own mixes (artist radio, genre, liked songs, discovery); empty when nothing downloaded fits.
+     * own mixes (artist radio, genre, liked songs, discovery, time of day, which needs [profile]);
+     * empty when nothing downloaded fits.
      */
-    fun tracks(mix: Mix, downloaded: List<Track>, favoriteIds: Set<String>, random: Random = Random): List<Track> {
+    fun tracks(
+        mix: Mix,
+        downloaded: List<Track>,
+        favoriteIds: Set<String>,
+        random: Random = Random,
+        profile: TasteProfile = TasteProfile(),
+    ): List<Track> {
         val id = mix.id.removePrefix(OFFLINE_MIX_PREFIX)
         val songs = when {
+            id.startsWith(TIME_PREFIX) -> {
+                val time = TimeOfDay.fromWire(id.removePrefix(TIME_PREFIX)) ?: return emptyList()
+                return timeMix(time, profile, downloaded, random)
+            }
             id == "all" || id == "discovery" -> downloaded.shuffled(random)
             id == "favorites" -> downloaded.filter { it.id in favoriteIds }.shuffled(random)
             id.startsWith("artist:") -> return artistRadio(id.removePrefix("artist:"), mix.featuring, downloaded, random)
@@ -83,6 +115,33 @@ object OfflineMixes {
             else -> emptyList()
         }
         return spreadArtists(songs).take(SIZE)
+    }
+
+    /**
+     * Like the server's time-of-day mix, from downloads: your songs for [time], favouring the ones
+     * that belong to it most, and every third song one by an artist or in a genre you lean toward
+     * then. Empty when the profile doesn't know this time yet.
+     */
+    private fun timeMix(time: TimeOfDay, profile: TasteProfile, downloaded: List<Track>, random: Random): List<Track> {
+        val taste = profile.timesOfDay[time] ?: return emptyList()
+        val own = downloaded.filter { it.id in taste.tracks }
+            .sortedByDescending { ln(random.nextDouble().coerceAtLeast(1e-12)) / taste.tracks.getValue(it.id) }
+        val fits = downloaded.filter {
+            it.id !in taste.tracks && profile.skipRate(it.id) < SKIPPED &&
+                ((taste.artists[it.artistId] ?: 0.0) > 0 || (taste.genres[it.genre?.lowercase()] ?: 0.0) > 0)
+        }.shuffled(random)
+        val mixed = mutableListOf<Track>()
+        var o = 0
+        var f = 0
+        while (mixed.size < SIZE && (o < own.size || f < fits.size)) {
+            val fitTurn = mixed.size % 3 == 2
+            mixed += when {
+                fitTurn && f < fits.size -> fits[f++]
+                o < own.size -> own[o++]
+                else -> fits[f++]
+            }
+        }
+        return spreadArtists(mixed)
     }
 
     /**

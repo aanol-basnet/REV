@@ -54,6 +54,14 @@
     <string name="mix_favorites_short">Liked Songs</string>
     <string name="mix_discovery">Discovery Mix</string>
     <string name="mix_discovery_short">Discovery</string>
+    <string name="mix_time_morning">Your morning mix</string>
+    <string name="mix_time_afternoon">Your afternoon mix</string>
+    <string name="mix_time_evening">Your evening mix</string>
+    <string name="mix_time_night">Your night mix</string>
+    <string name="mix_time_morning_short">Morning</string>
+    <string name="mix_time_afternoon_short">Afternoon</string>
+    <string name="mix_time_evening_short">Evening</string>
+    <string name="mix_time_night_short">Night</string>
     <string name="mix_downloads">Downloads Mix</string>
     <string name="mix_downloads_short">All downloads</string>
     <string name="mix_featuring">With %1$s and more</string>

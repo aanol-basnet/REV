@@ -20,6 +20,7 @@ import {
   periodBounds,
 } from './report.js';
 import { buildTaste } from './taste.js';
+import { timesOfDay, type TimeTaste } from './time-of-day.js';
 import { DAY_MS, Zone } from './zone.js';
 
 /** The parts of the music server the listening log needs. */
@@ -123,7 +124,24 @@ export class ListeningService {
   taste(userId: number, query: TasteQuery): TasteProfile {
     const now = this.now();
     const rows = this.rows(userId, { from: now - TASTE_DAYS * DAY_MS, to: now + DAY_MS });
-    return buildTaste(rows, new Zone(query.tz), now);
+    const zone = new Zone(query.tz);
+    return {
+      ...buildTaste(rows, zone, now),
+      timesOfDay: timesOfDay(rows, zone, now).map((t) => ({
+        time: t.time,
+        plays: t.plays,
+        tracks: t.tracks.map(({ id, score }) => ({ id, score })),
+        genres: t.genres,
+        artists: t.artists,
+      })),
+    };
+  }
+
+  /** What you listen to in each part of the day, from the last two years of listens. */
+  timesOfDay(userId: number, tz: string): TimeTaste[] {
+    const now = this.now();
+    const rows = this.rows(userId, { from: now - TASTE_DAYS * DAY_MS, to: now + DAY_MS });
+    return timesOfDay(rows, new Zone(tz), now);
   }
 
   private exists(userId: number, listen: Listen): boolean {

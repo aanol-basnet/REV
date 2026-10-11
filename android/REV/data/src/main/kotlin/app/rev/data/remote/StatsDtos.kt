@@ -5,6 +5,8 @@ import app.rev.domain.playback.ListenContext
 import app.rev.domain.taste.Daypart
 import app.rev.domain.taste.ModeTaste
 import app.rev.domain.taste.TasteProfile
+import app.rev.domain.taste.TimeOfDayTaste
+import app.rev.domain.model.TimeOfDay
 import app.rev.domain.taste.TrackHistory
 import app.rev.domain.model.Discoveries
 import app.rev.domain.model.ListeningReport
@@ -421,6 +423,7 @@ internal data class TasteProfileDto(
     val tracks: List<TasteTrackDto> = emptyList(),
     val dayparts: List<TasteDaypartDto> = emptyList(),
     val modes: List<TasteModeDto> = emptyList(),
+    val timesOfDay: List<TasteTimeOfDayDto> = emptyList(),
 ) {
     fun toDomain() = TasteProfile(
         artists = artists.associate { it.id to it.score },
@@ -433,8 +436,27 @@ internal data class TasteProfileDto(
         modes = modes.associate { m ->
             m.mode to ModeTaste(m.genres.associate { it.name.lowercase() to it.score }, m.artists.associate { it.id to it.score })
         },
+        timesOfDay = timesOfDay.mapNotNull { t ->
+            val time = TimeOfDay.fromWire(t.time) ?: return@mapNotNull null
+            time to TimeOfDayTaste(
+                tracks = t.tracks.associate { it.id to it.score },
+                genres = t.genres.associate { it.name.lowercase() to it.score },
+                artists = t.artists.associate { it.id to it.score },
+            )
+        }.toMap(),
     )
 }
+
+@Serializable
+internal data class TasteTimeOfDayDto(
+    val time: String,
+    val tracks: List<TasteTimeTrackDto> = emptyList(),
+    val genres: List<TasteGenreDto> = emptyList(),
+    val artists: List<TasteArtistDto> = emptyList(),
+)
+
+@Serializable
+internal data class TasteTimeTrackDto(val id: String, val score: Double)
 
 @Serializable
 internal data class TasteModeDto(

@@ -105,23 +105,25 @@ export type ListenBatchResult = z.infer<typeof ListenBatchResult>;
 export const ReportPeriodKind = z.enum(['week', 'month', 'year', 'all']);
 export type ReportPeriodKind = z.infer<typeof ReportPeriodKind>;
 
+/** An IANA time zone name, such as `Europe/Berlin`. */
+export const TimeZone = z
+  .string()
+  .max(64)
+  .refine((tz) => {
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: tz });
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'unknown time zone');
+
 export const ReportQuery = z.object({
   period: ReportPeriodKind.default('week'),
   /** 0 is the current period, 1 the one before, and so on. */
   offset: z.coerce.number().int().min(0).max(1000).default(0),
   /** IANA time zone the periods, days and hours are counted in. */
-  tz: z
-    .string()
-    .max(64)
-    .refine((tz) => {
-      try {
-        new Intl.DateTimeFormat('en', { timeZone: tz });
-        return true;
-      } catch {
-        return false;
-      }
-    }, 'unknown time zone')
-    .default('UTC'),
+  tz: TimeZone.default('UTC'),
 });
 export type ReportQuery = z.infer<typeof ReportQuery>;
 
@@ -385,6 +387,13 @@ const TasteScore = z.number().min(-1).max(1);
 export const TasteArtist = z.object({ id: z.string(), score: TasteScore });
 export const TasteGenre = z.object({ name: z.string(), score: TasteScore });
 
+/**
+ * Parts of the day for time-of-day mixes, local time: morning 5–12, afternoon 12–17, evening
+ * 17–22, night 22–5.
+ */
+export const TimeOfDay = z.enum(['morning', 'afternoon', 'evening', 'night']);
+export type TimeOfDay = z.infer<typeof TimeOfDay>;
+
 export const TasteProfile = z.object({
   generatedAt: z.number().int(),
   /** Listens the profile was built from. */
@@ -415,6 +424,22 @@ export const TasteProfile = z.object({
   modes: z
     .array(
       z.object({ mode: z.string(), genres: z.array(TasteGenre), artists: z.array(TasteArtist) }),
+    )
+    .default([]),
+  /**
+   * Each part of the day with enough listening: the songs you play then (best first; the score
+   * grows with recent plays then and with how much the song belongs to that time), and the
+   * genres and artists played more (positive) or less (negative) then than usual.
+   */
+  timesOfDay: z
+    .array(
+      z.object({
+        time: TimeOfDay,
+        plays: z.number().int().nonnegative(),
+        tracks: z.array(z.object({ id: z.string(), score: z.number().positive() })),
+        genres: z.array(TasteGenre),
+        artists: z.array(TasteArtist),
+      }),
     )
     .default([]),
 });

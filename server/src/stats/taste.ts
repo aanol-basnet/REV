@@ -26,9 +26,14 @@ interface Tally {
 /**
  * Turns the listening log into a taste profile: per artist, genre and decade a score from
  * recency-weighted plays and skips, per song its counts, and per part of the day (and per
- * listening mode) the genres and artists played more or less than usual then.
+ * listening mode) the genres and artists played more or less than usual then. Times of day come
+ * from [timesOfDay].
  */
-export function buildTaste(rows: PlayRow[], zone: Zone, now: number): TasteProfile {
+export function buildTaste(
+  rows: PlayRow[],
+  zone: Zone,
+  now: number,
+): Omit<TasteProfile, 'timesOfDay'> {
   const artists = new Map<string, Tally>();
   const genres = new Map<string, Tally & { name: string }>();
   const decades = new Map<number, Tally>();
@@ -163,11 +168,11 @@ function score({ plays, skips }: Tally): number {
 }
 
 /** How much more (up to 1) or less (down to -1) common something is in a part of the day. */
-function lift(share: number, usual: number): number {
+export function lift(share: number, usual: number): number {
   return round(Math.max(-1, Math.min(1, Math.log2(share / usual))));
 }
 
-function round(n: number): number {
+export function round(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 

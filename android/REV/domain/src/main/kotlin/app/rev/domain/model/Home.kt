@@ -11,8 +11,41 @@ data class HomeFeed(
     val genres: List<HomeGenre>,
 )
 
-/** [Downloads] is every song on the device; it exists only as an offline mix. */
-enum class MixKind { Artist, Genre, Favorites, Discovery, Downloads }
+/**
+ * [Downloads] is every song on the device; it exists only as an offline mix. [Time] is what you
+ * play at this time of day; its name is the [TimeOfDay]'s [TimeOfDay.wire].
+ */
+enum class MixKind { Artist, Genre, Favorites, Discovery, Downloads, Time }
+
+/** Parts of the day for time-of-day mixes, local time: morning 5–12, afternoon 12–17, evening 17–22, night 22–5. */
+enum class TimeOfDay(val wire: String) {
+    Morning("morning"),
+    Afternoon("afternoon"),
+    Evening("evening"),
+    Night("night"),
+    ;
+
+    companion object {
+        fun of(hour: Int): TimeOfDay = when (hour) {
+            in 5..11 -> Morning
+            in 12..16 -> Afternoon
+            in 17..21 -> Evening
+            else -> Night
+        }
+
+        fun fromWire(wire: String?): TimeOfDay? = entries.firstOrNull { it.wire == wire }
+    }
+}
+
+/**
+ * The feed without a time-of-day mix for another time than [hour]'s: a feed fetched in the
+ * morning and shown again in the evening (from the cache) shouldn't offer the morning mix.
+ */
+fun HomeFeed.forHour(hour: Int): HomeFeed {
+    val now = TimeOfDay.of(hour)
+    val stale = mixes.filter { it.kind == MixKind.Time && TimeOfDay.fromWire(it.name) != now }
+    return if (stale.isEmpty()) this else copy(mixes = mixes - stale.toSet())
+}
 
 /** A generated, playable track list. */
 data class Mix(

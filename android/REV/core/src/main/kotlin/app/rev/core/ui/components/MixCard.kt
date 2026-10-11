@@ -33,6 +33,7 @@ import app.rev.core.R
 import app.rev.core.ui.icons.RevIcons
 import app.rev.domain.model.Mix
 import app.rev.domain.model.MixKind
+import app.rev.domain.model.TimeOfDay
 
 /** A mix: a collage of what's in it, its name and who features. Tapping opens it; the play button plays it. */
 @Composable
@@ -184,6 +185,14 @@ fun mixTitle(mix: Mix): String = when (mix.kind) {
     MixKind.Favorites -> stringResource(R.string.mix_favorites)
     MixKind.Discovery -> stringResource(R.string.mix_discovery)
     MixKind.Downloads -> stringResource(R.string.mix_downloads)
+    MixKind.Time -> stringResource(
+        when (TimeOfDay.fromWire(mix.name)) {
+            TimeOfDay.Morning -> R.string.mix_time_morning
+            TimeOfDay.Afternoon -> R.string.mix_time_afternoon
+            TimeOfDay.Evening -> R.string.mix_time_evening
+            else -> R.string.mix_time_night
+        },
+    )
 }
 
 /** The short label printed on the card itself. */
@@ -193,4 +202,12 @@ private fun mixLabel(mix: Mix): String = when (mix.kind) {
     MixKind.Favorites -> stringResource(R.string.mix_favorites_short)
     MixKind.Discovery -> stringResource(R.string.mix_discovery_short)
     MixKind.Downloads -> stringResource(R.string.mix_downloads_short)
+    MixKind.Time -> stringResource(
+        when (TimeOfDay.fromWire(mix.name)) {
+            TimeOfDay.Morning -> R.string.mix_time_morning_short
+            TimeOfDay.Afternoon -> R.string.mix_time_afternoon_short
+            TimeOfDay.Evening -> R.string.mix_time_evening_short
+            else -> R.string.mix_time_night_short
+        },
+    )
 }

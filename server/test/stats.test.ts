@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { ListenBatchResult, ListeningReport, TasteProfile } from '@rev/schemas';
+import {
+  HomeFeed,
+  ListenBatchResult,
+  ListeningReport,
+  MixTracks,
+  TasteProfile,
+} from '@rev/schemas';
 import { periodBounds } from '../src/stats/report.js';
 import { Zone } from '../src/stats/zone.js';
 import { plays } from '../src/db/schema.js';
@@ -425,6 +431,68 @@ describe('listening statistics', () => {
     expect(taste.tracks.find((tr) => tr.id === 's4')).toEqual({ id: 's4', plays: 0, skips: 7 });
     expect(taste.dayparts).toHaveLength(6);
     expect((await t.app.inject({ url: '/api/stats/taste' })).statusCode).toBe(401);
+  });
+
+  it('learns what you play at each time of day and offers that mix on Home', async () => {
+    const { headers } = await setup();
+    const listens: ListenInput[] = [];
+    // Tool every morning, Deftones every evening, Bjork skipped in the morning.
+    for (let d = 1; d <= 5; d++) {
+      const morning = NOW - d * DAY - 4 * HOUR;
+      listens.push({ trackId: 's1', startedAt: morning, kind: 'play' });
+      listens.push({ trackId: 's2', startedAt: morning + 600_000, kind: 'play' });
+      listens.push({
+        trackId: 's4',
+        startedAt: morning + 1_200_000,
+        kind: 'skip',
+        listenedMs: 3_000,
+      });
+      listens.push({ trackId: 's3', startedAt: NOW - d * DAY + 7 * HOUR, kind: 'play' });
+      listens.push({ trackId: 's5', startedAt: NOW - d * DAY + 7 * HOUR + 600_000, kind: 'play' });
+    }
+    expect((await send(headers, listens)).statusCode).toBe(200);
+
+    const taste = TasteProfile.parse(
+      (await t.app.inject({ url: '/api/stats/taste?tz=UTC', headers })).json(),
+    );
+    const morning = taste.timesOfDay.find((p) => p.time === 'morning');
+    expect(morning?.tracks.map((tr) => tr.id).sort()).toEqual(['s1', 's2']);
+    expect(morning?.artists.find((a) => a.id === 'ar-Tool')?.score).toBeGreaterThan(0);
+    expect(
+      taste.timesOfDay
+        .find((p) => p.time === 'evening')
+        ?.tracks.map((tr) => tr.id)
+        .sort(),
+    ).toEqual(['s3', 's5']);
+
+    // Two songs aren't enough for a mix yet; two more morning songs are.
+    now = NOW - 3 * HOUR; // 09:00
+    const mixesNow = async () =>
+      HomeFeed.parse((await t.app.inject({ url: '/api/home?tz=UTC', headers })).json()).mixes;
+    expect(await mixesNow()).toEqual([]);
+    for (const id of ['s3', 's5', 's1']) {
+      await send(headers, [
+        { trackId: id, startedAt: NOW - 6 * DAY - 4 * HOUR + id.length, kind: 'play' },
+      ]);
+    }
+    const feed = await t.app.inject({ url: '/api/home?tz=UTC', headers });
+    expect(feed.statusCode).toBe(200);
+    expect(HomeFeed.parse(feed.json()).mixes[0]).toMatchObject({
+      id: 'time:morning',
+      kind: 'time',
+      name: 'morning',
+    });
+    // Without a time zone there's no time-of-day mix.
+    expect(
+      HomeFeed.parse((await t.app.inject({ url: '/api/home', headers })).json()).mixes,
+    ).toEqual([]);
+
+    const mix = await t.app.inject({ url: '/api/mixes/time:morning?tz=UTC', headers });
+    expect(mix.statusCode).toBe(200);
+    const ids = MixTracks.parse(mix.json()).tracks.map((tr) => tr.id);
+    expect(ids).toEqual(expect.arrayContaining(['s1', 's2']));
+    expect(ids).not.toContain('s4');
+    expect((await t.app.inject({ url: '/api/mixes/time:brunch', headers })).statusCode).toBe(400);
   });
 
   it('stores the context a listen was played in, keeping fields it does not know', async () => {

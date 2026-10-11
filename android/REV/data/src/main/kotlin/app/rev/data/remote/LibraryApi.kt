@@ -127,11 +127,17 @@ class LibraryApi(
     suspend fun serverLanUrls(): Result<List<String>, LibraryError> =
         get<ServerAddressesDto, _>("system/addresses") { it.lanUrls }
 
-    internal suspend fun home(refresh: Boolean): Result<HomeFeedDto, LibraryError> =
-        get<HomeFeedDto, _>("home", { if (refresh) parameter("refresh", "true") }) { it }
+    /** [timeZone]: the phone's, so the feed includes the mix for this time of day. */
+    internal suspend fun home(refresh: Boolean, timeZone: String): Result<HomeFeedDto, LibraryError> =
+        get<HomeFeedDto, _>("home", {
+            if (refresh) parameter("refresh", "true")
+            parameter("tz", timeZone)
+        }) { it }
 
-    suspend fun mixTracks(mixId: String): Result<List<Track>, LibraryError> =
-        get<MixTracksDto, _>("mixes/${mixId.encodeURLPathPart()}") { dto -> dto.tracks.map { it.toDomain() } }
+    suspend fun mixTracks(mixId: String, timeZone: String): Result<List<Track>, LibraryError> =
+        get<MixTracksDto, _>("mixes/${mixId.encodeURLPathPart()}", { parameter("tz", timeZone) }) { dto ->
+            dto.tracks.map { it.toDomain() }
+        }
 
     /** The album to play after [albumId] (autoplay); empty when the library has nothing else. */
     suspend fun nextAlbum(albumId: String, artistId: String?, genre: String?, exclude: List<String>): Result<List<Track>, LibraryError> =

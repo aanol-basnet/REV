@@ -181,9 +181,18 @@ whose source fails is dropped; the rest still returns. The feed is cached for 15
 (`?refresh=true` rebuilds) and its shuffles are seeded by date, so it's stable within a day.
 Clients localize titles from `kind` and `basedOn`.
 
+With `?tz=<IANA zone>`, the feed's `mixes` start with the mix for the current time of day
+(`{ id: "time:morning", kind: "time", name: "morning" }`; also `afternoon` 12–17, `evening`
+17–22, `night` 22–5, morning being 5–12), built from REV's own listening log for the signed-in
+user, once that time of day has at least 8 plays and 4 songs played more than skipped then. It
+isn't part of the cached feed, so it changes with the clock.
+
 `GET /api/mixes/:id` returns `{ id, tracks }`, freshly shuffled: `artist:<id>` (an artist radio:
 the artist every third track, the rest from similar artists), `genre:<name>`, `favorites` (starred
-tracks) or `discovery` (never-played tracks). In every mix, songs by one artist are spread at
+tracks), `discovery` (never-played tracks) or `time:<time of day>` (with `?tz=`, UTC by
+default: up to 34 of your songs for that time, picked at random weighted by score, and every third
+song a new one from the radio for the artists and genres you lean toward then, or, if none stand
+out, for the artists of your songs; songs you mostly skip then stay out). In every mix, songs by one artist are spread at
 least three apart where the mix allows. Play counts come from the one Navidrome account REV uses, so
 they're shared by all REV users.
 
@@ -316,6 +325,13 @@ skips (early skips count fully, later ones half), pulled toward 0 with little to
 less in it than usual (`{ mode, genres, artists }`, same scores as dayparts). `dayparts` are six 4-hour parts of the local day; their scores say how much more (up to 1) or
 less (down to -1) a genre or artist is played then than usual. Parts with fewer than 20 plays are
 empty.
+
+`timesOfDay` lists morning (5–12), afternoon (12–17), evening (17–22) and night (22–5), each with
+at least 8 plays: `{ time, plays, tracks: [{ id, score }], genres, artists }`. A song's score is
+its plays at that time (weight halves every 60 days) minus skips then, times how much of its
+playing happens then (smoothed share + 0.5), so a song you play only in the morning beats one you
+play all day; up to 60, best first. Genres and artists are scored like dayparts. The app uses this
+to build the time-of-day mix from downloads when offline.
 
 ### Smart playlists
 
